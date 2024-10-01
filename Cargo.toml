@@ -1,0 +1,22 @@
+[package]
+name = "accord"
+version = "0.0.1"
+edition = "2021"
+
+# See more keys and their definitions at
+# https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "accord"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.22"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+rust-htslib = "0.46"
+bio = "0.42"
+rand = "0.8"
+itertools = "0.13"
+counter = "0.6"
+clap = { version = "4.5", features = ["derive"] }

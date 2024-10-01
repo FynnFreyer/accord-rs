@@ -1,0 +1,147 @@
+use itertools::Itertools;
+
+use std::cmp::min;
+use std::fmt::{Display, Formatter};
+use std::ops::Index;
+use std::slice::SliceIndex;
+
+
+#[derive(Debug, Clone)]
+pub struct Seq {
+    // path: Path,
+    label: String,
+    // `Vec<u8>` allows for O(1) indexing, as opposed to `String`.
+    sequence: Vec<u8>,
+}
+
+impl Seq {
+    pub fn new(label: String, sequence: Vec<u8>) -> Self {
+        Self { label, sequence }
+    }
+
+    pub fn from_string(label: String, seq_string: String) -> Self {
+        let sequence = Vec::from(seq_string.as_bytes());
+        Self::new(label, sequence)
+    }
+
+    pub fn label_str(&self) -> &str { &self.label.as_str() }
+    pub fn label_string(&self) -> &String { &self.label }
+
+    pub fn sequence_string(&self) -> String {
+        let seq_bytes = self.sequence.clone();
+        String::from_utf8(seq_bytes).unwrap()
+    }
+
+    pub fn len(&self) -> usize { self.sequence.len() }
+
+    pub fn from_fasta(fasta: String) -> Vec<Self> {
+        // vector to collect all sequences in this fasta
+        let mut seqs = Vec::new();
+
+        // defined outside the loop, so we can reference it between iterations
+        let mut label_string = String::new();
+
+        // we group lines by wether they are labels, i.e., start with `>`, or not
+        let groups = &fasta.lines().into_iter().chunk_by(|l| l.starts_with(">"));
+        for (is_label, lines_group) in groups {
+            // collect the actual lines into a vector
+            let lines = lines_group.collect::<Vec<&str>>();
+            if is_label {  // this is a label group
+                if lines.len() > 1 {
+                    // throw if the fasta has more than one label line
+                    panic!("More than one label line:\n{:?}", lines)
+                }
+
+                // remove the leading `>` and trim start and end
+                let clean_label = lines[0][1..].trim();
+                // set the label string
+                label_string = String::from(clean_label);
+            } else {  // this group contains sequence data
+                // clone the label, so we can move it
+                let label = label_string.clone();
+                // get the sequence data as bytes
+                let sequence = Vec::from(lines.join("").as_bytes());
+
+                // construct a Seq and push it into the sequence vector
+                seqs.push(Self { label, sequence });
+            }
+        }
+
+        seqs
+    }
+
+    pub fn to_fasta(&self) -> String {
+        let mut fasta = String::new();
+
+        // write label
+        fasta.push('>');
+        fasta.push_str(self.label.as_str());
+        fasta.push('\n');
+
+        // write sequence
+        let width = 80;  // lines wrap after 80 chars
+        let lines = self.sequence.len().div_ceil(width);
+        let len = self.sequence.len();
+        for line in 0..lines {
+            let start = line * width;
+            let full_end = start + width;
+            let end = min(full_end, len);
+
+            let line_slice = &self.sequence[start..end];
+            let line_content = match std::str::from_utf8(line_slice) {
+                Ok(s) => s,
+                Err(e) => panic!("Unable to convert Seq into string: {}", e)
+            };
+
+            fasta.push_str(line_content);
+            fasta.push('\n');
+        }
+
+        fasta
+    }
+}
+
+impl Display for Seq {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let seq = self.to_fasta();
+        f.write_str(seq.as_str())
+    }
+}
+
+impl<Idx: SliceIndex<[u8]>> Index<Idx> for Seq {
+    type Output = Idx::Output;
+    fn index(&self, index: Idx) -> &Self::Output { self.sequence.index(index) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn init_seq() -> Seq {
+        let label = String::from("Nucleotides");
+        let sequence = String::from("GATTACA");
+        Seq::from_string(label, sequence)
+    }
+
+    #[test]
+    fn test_seq() {
+        let mut seqs = Seq::from_file("assets/K03455.fasta");
+
+        // correct number of sequences
+        assert_eq!(seqs.len(), 1);
+
+        let reference = match seqs.pop() {
+            None => panic!("No ref (wat?!)"),  // shouldn't happen because we check len before
+            Some(seq) => seq
+        };
+
+        // label was read correctly
+        assert_eq!(reference.label, "HXB2_K03455 (Human_immunodeficiency_virus_type_1-complete_genome)");
+
+        // sequence was read correctly
+        assert_eq!(reference.sequence.len(), 9719);
+        assert!(reference.sequence_string().starts_with("TGGAAGGGCTAATTCACTCCCAACGAAGACAAGATATCC"));
+        assert!(reference.sequence_string().ends_with("CCCTCAGACCCTTTTAGTCAGTGTGGAAAATCTCTAGCA"));
+    }
+}
+
