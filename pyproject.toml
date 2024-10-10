@@ -1,12 +1,24 @@
 [project]
 name = "accord-rs"
-requires-python = ">=3.12"
-classifiers = [
-    "Programming Language :: Rust",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
+authors = [
+    { name = "Fynn Freyer", email = "fynn.freyer@googlemail.com" },
 ]
-dynamic = ["version"]
+description = "Calculate consensus sequences"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Rust",
+    "Programming Language :: Python",
+    # "Programming Language :: Python :: Implementation :: CPython",
+    # "Programming Language :: Python :: Implementation :: PyPy",
+]
+dynamic = ["version", "description", "readme"]
+
+[project.urls]
+Repository = "https://github.com/FynnFreyer/accord-rs"
+Issues = "https://github.com/FynnFreyer/accord-rs/issues"
+# Documentation = "https://fynnfreyer.github.io/accord-rs"
 
 [build-system]
 requires = ["maturin>=1.7,<2.0"]

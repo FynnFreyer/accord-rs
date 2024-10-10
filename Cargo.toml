@@ -1,10 +1,14 @@
 [package]
-name = "accord"
+name = "accord-rs"
 version = "0.0.1"
+authors = ["Fynn Freyer <fynn.freyer@googlemail.com>"]
 edition = "2021"
+description = "Calculate consensus sequences"
+readme = "README.md"
+license-file = "LICENSE"
+repository = "https://github.com/FynnFreyer/accord-rs"
+# documentation = "https://fynnfreyer.github.io/accord-rs"
 
-# See more keys and their definitions at
-# https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "accord"
 crate-type = ["cdylib"]

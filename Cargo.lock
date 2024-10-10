@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "accord"
+name = "accord-rs"
 version = "0.0.1"
 dependencies = [
  "clap",
