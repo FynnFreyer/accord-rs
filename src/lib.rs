@@ -20,8 +20,7 @@ fn build_consensus(ref_path: String, aln_path: String) -> PyResult<String> {
 }
 
 /// A Python module implemented in Rust.
-#[pymodule]
-#[pyo3(name="_accord")]
+#[pymodule(name="_internal")]
 fn py_accord(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(build_consensus, m)?)?;
     m.add_class::<Calculator>()?;
