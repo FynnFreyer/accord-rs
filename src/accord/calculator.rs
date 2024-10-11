@@ -39,6 +39,7 @@ pub struct Calculator {
     base_counts: BaseCounts,
     indel_counts: InDelCounts,
     aln_data: Vec<AlnData>,
+    alns_considered: Vec<usize>,
     // insertion_counts: InsertionCounts,
     // deletion_counts: DeletionCounts,
 }
@@ -49,13 +50,31 @@ impl Calculator {
         let base_counts = vec![Counter::new(); ref_seq.len()];
         let indel_counts = Counter::new();
         let aln_data = Vec::new();
+        let alns_considered = Vec::new();
 
-        Self { ref_seq, aln_path, aln_quality_reqs, coverage, base_counts, indel_counts, aln_data }
+        Self {
+            ref_seq,
+            aln_path,
+            aln_quality_reqs,
+            coverage,
+            base_counts,
+            indel_counts,
+            aln_data,
+            alns_considered,
+        }
     }
 
-    // This consumes `self`.
-    pub fn compute_aln_stats(self) -> AlnStats {
-        AlnStats::from_data(self.aln_data)
+    /// Compute alignment statistics of all reads that were seen, and those reads considered in the consensus calculation respectively.
+    pub fn compute_aln_stats(&self) -> (AlnStats, AlnStats) {
+        let quantile_factors = vec![0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0];
+        let stats_total = AlnStats::from_data(&self.aln_data, &quantile_factors);
+        let aln_data_considered = self.alns_considered
+            .iter()
+            .map(|i| self.aln_data[*i].clone())
+            .collect_vec();
+        let stats_considered = AlnStats::from_data(&aln_data_considered, &quantile_factors);
+
+        (stats_total, stats_considered)
     }
 
     pub fn compute_consensus(&mut self) -> Seq {
@@ -94,9 +113,6 @@ impl Calculator {
     }
 
     fn analyse_alignments(&mut self) {
-        let mut good_reads: usize = 0;
-        let mut bad_reads: usize = 0;
-
         let mut alns = Reader::from_path(self.aln_path.as_str()).unwrap();
         for p in alns.pileup() {
             // `pileup` holds references to all reads that were aligned to a specific position
@@ -110,21 +126,20 @@ impl Calculator {
             for alignment in pileup.alignments() {
                 // the SAM record of the aligned read
                 let record = alignment.record();
+
                 // TODO only consider good data?
                 let aln_data = AlnData::from_record(&record);
                 self.aln_data.push(aln_data);
 
                 // discard read alignments with insufficient quality, flags, etc.
                 if !self.aln_quality_reqs.is_suitable(&record) {
-                    bad_reads += 1;
-
                     // TODO: use proper logging
                     // let read_name = String::from_utf8_lossy(record.qname());  // used for logging
                     // println!("Skipped low quality alignment for read: {}", read_name);
                     continue;
                 }
 
-                good_reads += 1;
+                self.alns_considered.push(self.aln_data.len() - 1);
 
                 self.update_base_counts(&alignment, &ref_pos);
                 self.update_indel_counts(&alignment, &ref_pos);
@@ -196,39 +211,6 @@ impl Calculator {
         let del = Deletion::new(del_start, del_stop);
         InDel::Del(del)
     }
-
-    //         # twe sort by position, so we can find conflicts
-    //         sorted_indel_stats = sorted(filtered_stats, key=attrgetter("indel"))
-    //
-    //         # now we check for conflicts, by grouping the indels,
-    //         # so that conflicting events go into the same sub-list
-    //         # e.g. we want [[a], [b, c], [d]], if b and c conflict with each other
-    //
-    //         if not sorted_indel_stats:  # we're initializing the first group, so we have to bail if there's no data
-    //             return apply, discard
-    //
-    //         groups: list[set[InDelStats]] = []
-    //         group: set[InDelStats] = {sorted_indel_stats[0]}
-    //         for indel_stat, next_indel_stat in pairwise(sorted_indel_stats):
-    //             conflict = indel_stat.indel.interferes_with(next_indel_stat.indel)
-    //             if conflict:
-    //                 group.add(next_indel_stat)
-    //             else:
-    //                 groups.append(group)
-    //                 group = {next_indel_stat}
-    //         groups.append(group)  # add last group
-    //
-    //         for group in groups:
-    //             flip = max(group, key=attrgetter("frequency"))
-    //             if flip.frequency >= self.quality_requirements.indel_cutoff:
-    //                 apply.add(flip)
-    //                 flops = group - {flip}
-    //             else:
-    //                 flops = group
-    //             discard.update(flops)
-    //
-    //         return apply, discard
-
 
     fn apply_indels(&self, seq_bytes: Vec<u8>) -> Vec<u8> {
         let applicable_indels = self.get_applicable_indels();

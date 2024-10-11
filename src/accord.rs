@@ -44,7 +44,7 @@ impl App {
         let consensus = calculator.compute_consensus();
         let fasta = consensus.to_fasta();
 
-        let stats = calculator.compute_aln_stats();
+        let (stats_total, stats_considered) = calculator.compute_aln_stats();
 
         if args.out_path != "-" {
             write_file(&fasta, args.out_path.as_str());
@@ -53,6 +53,6 @@ impl App {
         }
 
         println!();
-        println!("{stats:?}");
+        println!("{stats_considered:?}");
     }
 }
