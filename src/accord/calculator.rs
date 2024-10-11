@@ -1,10 +1,8 @@
 use crate::accord::data;
+
 use std::cmp::Ordering;
 use std::collections::VecDeque;
-
-use data::indel::{Deletion, InDel, Insertion};
-use data::seq::Seq;
-use data::settings::AlnQualityReqs;
+use std::iter::Iterator;
 
 use bam::pileup::Indel;
 use bam::{Read, Reader};
@@ -13,11 +11,13 @@ use itertools::Itertools;
 use pyo3::pyclass;
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
-use std::iter::Iterator;
 
-// A table in which we count how often each base occurred in every position in the reference sequence.
-// Dimension is `symbol x position`.
-// With one inner vector for every base symbol, and inner vector length equal to reference sequence length.
+use data::indel::{Deletion, InDel, Insertion};
+use data::seq::Seq;
+use data::settings::AlnQualityReqs;
+use data::stats::{AlnData, AlnStats};
+
+/// A list of base counts for every position in the reference sequence.
 type BaseCounts = Vec<Counter<u8>>;
 
 /// A map in which encountered insertions point to their respective number of occurrences.
@@ -38,6 +38,7 @@ pub struct Calculator {
     coverage: Vec<usize>,
     base_counts: BaseCounts,
     indel_counts: InDelCounts,
+    aln_data: Vec<AlnData>,
     // insertion_counts: InsertionCounts,
     // deletion_counts: DeletionCounts,
 }
@@ -47,8 +48,14 @@ impl Calculator {
         let coverage = vec![0; ref_seq.len()];
         let base_counts = vec![Counter::new(); ref_seq.len()];
         let indel_counts = Counter::new();
+        let aln_data = Vec::new();
 
-        Self { ref_seq, aln_path, aln_quality_reqs, coverage, base_counts, indel_counts }
+        Self { ref_seq, aln_path, aln_quality_reqs, coverage, base_counts, indel_counts, aln_data }
+    }
+
+    // This consumes `self`.
+    pub fn compute_aln_stats(self) -> AlnStats {
+        AlnStats::from_data(self.aln_data)
     }
 
     pub fn compute_consensus(&mut self) -> Seq {
@@ -87,12 +94,15 @@ impl Calculator {
     }
 
     fn analyse_alignments(&mut self) {
+        let mut good_reads: usize = 0;
+        let mut bad_reads: usize = 0;
+
         let mut alns = Reader::from_path(self.aln_path.as_str()).unwrap();
         for p in alns.pileup() {
             // `pileup` holds references to all reads that were aligned to a specific position
             let pileup = match p {
                 Ok(p) => p,
-                Err(e) => panic!("{e}"),
+                Err(e) => panic!("Unable to generate pileup: {e}"),
             };
 
             let ref_pos = pileup.pos() as usize;
@@ -100,14 +110,21 @@ impl Calculator {
             for alignment in pileup.alignments() {
                 // the SAM record of the aligned read
                 let record = alignment.record();
+                // TODO only consider good data?
+                let aln_data = AlnData::from_record(&record);
+                self.aln_data.push(aln_data);
 
                 // discard read alignments with insufficient quality, flags, etc.
                 if !self.aln_quality_reqs.is_suitable(&record) {
+                    bad_reads += 1;
+
                     // TODO: use proper logging
                     // let read_name = String::from_utf8_lossy(record.qname());  // used for logging
                     // println!("Skipped low quality alignment for read: {}", read_name);
                     continue;
                 }
+
+                good_reads += 1;
 
                 self.update_base_counts(&alignment, &ref_pos);
                 self.update_indel_counts(&alignment, &ref_pos);

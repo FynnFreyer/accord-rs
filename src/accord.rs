@@ -3,10 +3,9 @@ pub mod data;
 
 use clap::Parser;
 
-use calculator::Calculator;
-use data::seq::Seq;
-use data::settings::AlnQualityReqs;
 use crate::utils::{get_fasta_seq, write_file};
+use calculator::Calculator;
+use data::settings::AlnQualityReqs;
 
 
 #[derive(Parser, Debug)]
@@ -41,19 +40,19 @@ impl App {
         let ref_seq = get_fasta_seq(&args.ref_path);
         let aln_path = args.aln_path;
 
-        let consensus = Self::calculate_consensus(ref_seq, aln_path);
-        let output = consensus.to_fasta();
-
-        if args.out_path != "-" {
-            write_file(&output, args.out_path.as_str());
-        } else {
-            print!("{output}")
-        }
-    }
-
-    pub fn calculate_consensus(ref_seq: Seq, aln_path: String) -> Seq {
         let mut calculator = Calculator::new(ref_seq, aln_path, DEFAULT_REQS);
         let consensus = calculator.compute_consensus();
-        consensus
+        let fasta = consensus.to_fasta();
+
+        let stats = calculator.compute_aln_stats();
+
+        if args.out_path != "-" {
+            write_file(&fasta, args.out_path.as_str());
+        } else {
+            print!("{fasta}");
+        }
+
+        println!();
+        println!("{stats:?}");
     }
 }
