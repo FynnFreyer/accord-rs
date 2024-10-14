@@ -25,24 +25,30 @@ type BaseCounts = Vec<Counter<u8>>;
 type InDelCounts = Counter<InDel, usize>;
 
 
-// /// A map in which encountered insertions point to their respective number of occurrences.
-// type InsertionCounts = Counter<Insertion, usize>;
-//
-// /// A map in which encountered deletions point to their respective number of occurrences.
-// type DeletionCounts = Counter<Deletion, usize>;
-
 #[pyclass]
 pub struct Calculator {
+    /// The reference against which the reads were aligned.
     ref_seq: Seq,
+
+    /// Path to a sorted BAM-file with aligned reads.
     aln_path: String,
+
+    /// Settings for alignment quality.
+    /// These determine which reads are considered in the consensus calculation.
     aln_quality_reqs: AlnQualityReqs,
+
+    /// Vector with coverage relative to position in reference genome.
     coverage: Vec<usize>,
+
+    /// Vector with base counts relative to position in reference genome.
     base_counts: BaseCounts,
+
+    /// Map with indel counts.
     indel_counts: InDelCounts,
+
+    /// Vector containing data for all seen alignments.
     aln_data: Vec<AlnData>,
     alns_considered: Vec<usize>,
-    // insertion_counts: InsertionCounts,
-    // deletion_counts: DeletionCounts,
 }
 
 #[pymethods]
