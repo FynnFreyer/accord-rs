@@ -78,11 +78,11 @@ impl DistributionStats {
         Self { quantiles, sample_size, mean, sum_of_squares }
     }
 
-    pub fn std_deviation(self) -> f64 {
+    pub fn std_deviation(&self) -> f64 {
         self.variance().sqrt()
     }
 
-    pub fn variance(self) -> f64 {
+    pub fn variance(&self) -> f64 {
         self.sum_of_squares / self.sample_size as f64
     }
 
