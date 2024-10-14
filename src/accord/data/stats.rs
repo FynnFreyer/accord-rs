@@ -1,8 +1,4 @@
-use std::iter::Sum;
-
 use itertools::Itertools;
-use num::traits::AsPrimitive;
-use num::Num;
 use rust_htslib::bam::record::Aux;
 use rust_htslib::bam::Record;
 use serde::{Deserialize, Serialize};
@@ -48,39 +44,35 @@ impl AlnData {
     }
 }
 
+/// Struct for quantile data of unsigned integral values.
+///
 /// Combines a quantile factor and the quantile value.
 /// E.g., with `{ factor: 0.2, value: 3 }` 20 % of values are lower or equal to 3.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct Quantile<T> {
+struct Quantile {
     factor: f64,
-    value: T,
+    value: usize,
 }
 
-/// Distribution of *integral* data.
+/// Metrics describing the distribution of *unsigned, integral* data.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct DistributionStats<T> {
-    quantiles: Vec<Quantile<T>>,
+struct DistributionStats {
+    quantiles: Vec<Quantile>,
     sample_size: usize,
     mean: f64,
     sum_of_squares: f64,
 }
 
-impl<T: Num + AsPrimitive<f64> + AsPrimitive<usize> + Sum<T> + Ord + Clone> DistributionStats<T> {
-    pub fn from_numbers(numbers: Vec<T>, quantile_factors: &Vec<f64>) -> Self {
+impl DistributionStats {
+    pub fn from_numbers(numbers: Vec<usize>, quantile_factors: &Vec<f64>) -> Self {
         let quantiles = Self::calculate_quants(&numbers, quantile_factors);
         let sample_size = numbers.len();
 
-        let total = numbers.iter().fold(0, |accum, num| {
-            let num_u: usize = num.as_();
-            accum + num_u
-        });
-        let total_f: f64 = total.as_();
-        let mean = total_f / sample_size as f64;
+        let total = numbers.iter().sum::<usize>();
+        let mean = total as f64 / sample_size as f64;
 
         let sum_of_squares = numbers.iter().map(|num| {
-            let num_f: f64 = num.as_();
-            let diff: f64 = num_f - mean;
-            diff.powi(2)
+            (*num as f64 - mean).powi(2)
         }).sum();
 
         Self { quantiles, sample_size, mean, sum_of_squares }
@@ -94,7 +86,7 @@ impl<T: Num + AsPrimitive<f64> + AsPrimitive<usize> + Sum<T> + Ord + Clone> Dist
         self.sum_of_squares / self.sample_size as f64
     }
 
-    fn calculate_quants(numbers: &Vec<T>, factors: &Vec<f64>) -> Vec<Quantile<T>> {
+    fn calculate_quants(numbers: &Vec<usize>, factors: &Vec<f64>) -> Vec<Quantile> {
         let n = numbers.len();
         let sorted_nums = numbers.iter().sorted().collect_vec();
 
@@ -127,10 +119,10 @@ impl<T: Num + AsPrimitive<f64> + AsPrimitive<usize> + Sum<T> + Ord + Clone> Dist
 /// The distribution stats
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AlnStats {
-    length_distribution: DistributionStats<usize>,
-    quality_distribution: DistributionStats<u8>,
-    score_distribution: DistributionStats<usize>,
-    editing_distance_distribution: DistributionStats<usize>,
+    length_distribution: DistributionStats,
+    quality_distribution: DistributionStats,
+    score_distribution: DistributionStats,
+    editing_distance_distribution: DistributionStats,
 }
 
 impl AlnStats {
@@ -155,10 +147,10 @@ impl AlnStats {
     }
 
     fn calculate_distributions(aln_data: &Vec<AlnData>, quantile_factors: &Vec<f64>) -> (
-        DistributionStats<usize>,
-        DistributionStats<u8>,
-        DistributionStats<usize>,
-        DistributionStats<usize>
+        DistributionStats,
+        DistributionStats,
+        DistributionStats,
+        DistributionStats,
     ) {
         let mut lengths = Vec::new();
         let mut qualities = Vec::new();
@@ -167,7 +159,7 @@ impl AlnStats {
 
         for data in aln_data {
             lengths.push(data.length);
-            qualities.push(data.mapq);
+            qualities.push(data.mapq as usize);
             scores.push(data.score);
             distances.push(data.distance);
         }
