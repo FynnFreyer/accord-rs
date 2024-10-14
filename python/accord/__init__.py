@@ -1,3 +1,9 @@
-from ._internal import Calculator
+import sys
 
-__all__ = ["Calculator"]
+from ._internal import Calculator, data
+
+# necessary for imports, see discussion at: https://github.com/PyO3/pyo3/issues/759
+sys.modules["accord.data"] = data
+sys.modules["accord.data.indel"] = data.indel
+
+__all__ = ["Calculator", "data"]
