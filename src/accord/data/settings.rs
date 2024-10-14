@@ -1,8 +1,10 @@
+use pyo3::pyclass;
 use rust_htslib::bam::Record;
 use serde::{Deserialize, Serialize};
 
 /// Requirements for alignment quality.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[pyclass]
 pub struct AlnQualityReqs {
     /// Minimal mapping quality for a read to be considered.
     pub min_mapq: u8,

@@ -4,9 +4,11 @@ use std::cmp::min;
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::slice::SliceIndex;
-
+use pyo3::{pyclass, pymethods, Bound};
+use pyo3::types::PyType;
 
 #[derive(Debug, Clone)]
+#[pyclass]
 pub struct Seq {
     // path: Path,
     label: String,
@@ -27,13 +29,16 @@ impl Seq {
     pub fn label_str(&self) -> &str { &self.label.as_str() }
     pub fn label_string(&self) -> &String { &self.label }
 
+    /// Get the sequence data as a string, not a vector.
     pub fn sequence_string(&self) -> String {
         let seq_bytes = self.sequence.clone();
         String::from_utf8(seq_bytes).unwrap()
     }
 
+    /// Get the sequence length.
     pub fn len(&self) -> usize { self.sequence.len() }
 
+    /// Parse `Seq`s from a FASTA string.
     pub fn from_fasta(fasta: String) -> Vec<Self> {
         // vector to collect all sequences in this fasta
         let mut seqs = Vec::new();
@@ -70,6 +75,7 @@ impl Seq {
         seqs
     }
 
+    /// Convert a `Seq` into a FASTA string.
     pub fn to_fasta(&self) -> String {
         let mut fasta = String::new();
 
@@ -100,6 +106,33 @@ impl Seq {
         fasta
     }
 }
+
+#[pymethods]
+impl Seq {
+    #[new]
+    fn py_new(label: String, sequence: String) -> Self {
+        Self::from_string(label, sequence)
+    }
+
+    #[pyo3(name = "to_fasta")]
+    fn py_to_fasta(&self) -> String {
+        self.to_fasta()
+    }
+
+    #[classmethod]
+    #[pyo3(name = "from_fasta")]
+    fn py_from_fasta(_cls: &Bound<'_, PyType>, fasta: String) -> Vec<Self> {
+        Self::from_fasta(fasta)
+    }
+
+    /// Python dunder method for `len`.
+    pub fn __len__(&self) -> usize {
+        self.len()
+    }
+
+    // _cls: &Bound<'_, PyType>
+}
+
 
 impl Display for Seq {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

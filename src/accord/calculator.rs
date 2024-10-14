@@ -8,9 +8,10 @@ use bam::pileup::Indel;
 use bam::{Read, Reader};
 use counter::Counter;
 use itertools::Itertools;
-use pyo3::pyclass;
+use pyo3::{pyclass, pymethods};
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
+use serde_json::{from_str, to_string};
 
 use data::indel::{Deletion, InDel, Insertion};
 use data::seq::Seq;
@@ -44,6 +45,25 @@ pub struct Calculator {
     // deletion_counts: DeletionCounts,
 }
 
+#[pymethods]
+impl Calculator {
+    #[new]
+    pub fn py_new(ref_seq_label: String, ref_seq_string: String, aln_path: String, aln_quality_reqs: String) -> Self {
+        let ref_seq = Seq::from_string(ref_seq_label, ref_seq_string);
+        let aln_quality_reqs = from_str(aln_quality_reqs.as_str()).unwrap();
+        Self::new(ref_seq, aln_path, aln_quality_reqs)
+    }
+
+    /// Calculate consensus and statistics.
+    /// Statistics are passed as JSON string.
+    pub fn py_calculate(&mut self) -> (String, String, String) {
+        let cons = self.compute_consensus();
+        let (stats_total, stats_considered) = self.compute_aln_stats();
+
+        (cons.sequence_string(), to_string(&stats_total).unwrap(), to_string(&stats_considered).unwrap())
+    }
+}
+
 impl Calculator {
     pub fn new(ref_seq: Seq, aln_path: String, aln_quality_reqs: AlnQualityReqs) -> Self {
         let coverage = vec![0; ref_seq.len()];
@@ -64,6 +84,18 @@ impl Calculator {
         }
     }
 
+    /// Compute the consensus sequence for the seen reads that satisfied the quality criteria.
+    pub fn compute_consensus(&mut self) -> Seq {
+        self.analyse_alignments();
+        let base_calling_consensus = self.use_majority_bases();
+        let indel_consensus = self.apply_indels(base_calling_consensus);
+
+        let mut label = String::from(self.ref_seq.label_string());
+        label.push_str(".consensus");
+
+        Seq::new(label, indel_consensus)
+    }
+
     /// Compute alignment statistics of all reads that were seen, and those reads considered in the consensus calculation respectively.
     pub fn compute_aln_stats(&self) -> (AlnStats, AlnStats) {
         let quantile_factors = vec![0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0];
@@ -76,18 +108,9 @@ impl Calculator {
 
         (stats_total, stats_considered)
     }
+}
 
-    pub fn compute_consensus(&mut self) -> Seq {
-        self.analyse_alignments();
-        let base_calling_consensus = self.use_majority_bases();
-        let indel_consensus = self.apply_indels(base_calling_consensus);
-
-        let mut label = String::from(self.ref_seq.label_string());
-        label.push_str(".consensus");
-
-        Seq::new(label, indel_consensus)
-    }
-
+impl Calculator {
     fn use_majority_bases(&self) -> Vec<u8> {
         let mut consensus: Vec<u8> = Vec::with_capacity(self.ref_seq.len());
 

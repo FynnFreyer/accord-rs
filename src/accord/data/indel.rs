@@ -1,13 +1,16 @@
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use std::ops::RangeInclusive;
+use pyo3::{pyclass, pymethods};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[pyclass]
 pub enum InDel {
     Ins(Insertion),
     Del(Deletion),
 }
 
+#[pymethods]
 impl InDel {
     /// Get the starting position of this indel event, independent of read direction.
     /// That means the left side start of the event when considering forward direction.
@@ -43,10 +46,6 @@ impl InDel {
         }
     }
 
-    /// Base positions spanning the event site as an inclusive range `start..=stop`.
-    /// Start and stop are independent of read direction, and you may assume order `start <= stop`.
-    pub fn range(&self) -> RangeInclusive<usize> { self.get_start()..=self.get_stop() }
-
     // /// InDels interfere with one another, if they cover the same area.
     // /// Or in mixed cases (i.e. insertion and deletion), even if they're just directly adjacent.
     // fn interferes_with(&self, other: &impl InDel) -> bool;
@@ -61,7 +60,14 @@ impl InDel {
     pub fn breaks_reading_frame(&self) -> bool { !self.preserves_reading_frame() }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+impl InDel {
+    /// Base positions spanning the event site as an inclusive range `start..=stop`.
+    /// Start and stop are independent of read direction, and you may assume order `start <= stop`.
+    pub fn range(&self) -> RangeInclusive<usize> { self.get_start()..=self.get_stop() }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[pyclass]
 pub struct Insertion {
     /// Base position directly to the left of the insertion in the forward sequence.
     pub position: usize,
@@ -70,11 +76,15 @@ pub struct Insertion {
     sequence: Vec<u8>,
 }
 
+
+#[pymethods]
 impl Insertion {
+    #[new]
     pub fn new(position: usize, sequence: Vec<u8>) -> Self { Self { position, sequence } }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[pyclass]
 pub struct Deletion {
     /// Position of the first base that was affected by this deletion.
     start: usize,
@@ -83,7 +93,9 @@ pub struct Deletion {
     stop: usize,
 }
 
+#[pymethods]
 impl Deletion {
+    #[new]
     pub fn new(start: usize, stop: usize) -> Self { Self { start, stop } }
 }
 

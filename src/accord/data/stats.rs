@@ -1,4 +1,6 @@
 use itertools::Itertools;
+use pyo3::{pyclass, pymethods, Bound};
+use pyo3::types::PyType;
 use rust_htslib::bam::record::Aux;
 use rust_htslib::bam::Record;
 use serde::{Deserialize, Serialize};
@@ -6,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// Relevant data for an aligned read.
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[pyclass]
 pub struct AlnData {
     length: usize,
     mapq: u8,
@@ -15,6 +18,7 @@ pub struct AlnData {
 }
 
 impl AlnData {
+    /// Create an `AlnData` object by extracting relevant data from an htslib BAM record.
     pub fn from_record(record: &Record) -> Self {
         let length = record.seq_len();
         let mapq = record.mapq();
@@ -49,6 +53,7 @@ impl AlnData {
 /// Combines a quantile factor and the quantile value.
 /// E.g., with `{ factor: 0.2, value: 3 }` 20 % of values are lower or equal to 3.
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[pyclass]
 struct Quantile {
     factor: f64,
     value: usize,
@@ -56,6 +61,7 @@ struct Quantile {
 
 /// Metrics describing the distribution of *unsigned, integral* data.
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[pyclass]
 struct DistributionStats {
     quantiles: Vec<Quantile>,
     sample_size: usize,
@@ -64,6 +70,7 @@ struct DistributionStats {
 }
 
 impl DistributionStats {
+    /// Determine the distribution of some numbers.
     pub fn from_numbers(numbers: Vec<usize>, quantile_factors: &Vec<f64>) -> Self {
         let quantiles = Self::calculate_quants(&numbers, quantile_factors);
         let sample_size = numbers.len();
@@ -76,14 +83,6 @@ impl DistributionStats {
         }).sum();
 
         Self { quantiles, sample_size, mean, sum_of_squares }
-    }
-
-    pub fn std_deviation(&self) -> f64 {
-        self.variance().sqrt()
-    }
-
-    pub fn variance(&self) -> f64 {
-        self.sum_of_squares / self.sample_size as f64
     }
 
     fn calculate_quants(numbers: &Vec<usize>, factors: &Vec<f64>) -> Vec<Quantile> {
@@ -115,9 +114,26 @@ impl DistributionStats {
     }
 }
 
+#[pymethods]
+impl DistributionStats {
+    #[classmethod]
+    #[pyo3(name = "from_numbers")]
+    fn py_from_numbers(_cls: &Bound<'_, PyType>, numbers: Vec<usize>, factors: Vec<f64>) -> Self {
+        Self::from_numbers(numbers, &factors)
+    }
+    pub fn std_deviation(&self) -> f64 {
+        self.variance().sqrt()
+    }
+
+    pub fn variance(&self) -> f64 {
+        self.sum_of_squares / self.sample_size as f64
+    }
+}
+
 /// Statistical data of the seen alignments.
 /// The distribution stats
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[pyclass]
 pub struct AlnStats {
     length_distribution: DistributionStats,
     quality_distribution: DistributionStats,
@@ -140,10 +156,6 @@ impl AlnStats {
             score_distribution,
             editing_distance_distribution,
         }
-    }
-
-    pub fn get_sample_size(&self) -> usize {
-        self.length_distribution.sample_size
     }
 
     fn calculate_distributions(aln_data: &Vec<AlnData>, quantile_factors: &Vec<f64>) -> (
@@ -170,5 +182,18 @@ impl AlnStats {
         let editing_distance_distribution = DistributionStats::from_numbers(distances, quantile_factors);
 
         (length_distribution, quality_distribution, score_distribution, editing_distance_distribution)
+    }
+}
+
+#[pymethods]
+impl AlnStats {
+    #[classmethod]
+    #[pyo3(name = "from_data")]
+    fn py_from_data(_cls: &Bound<'_, PyType>, data: Vec<AlnData>, factors: Vec<f64>) -> Self {
+        Self::from_data(&data, &factors)
+    }
+
+    pub fn get_sample_size(&self) -> usize {
+        self.length_distribution.sample_size
     }
 }
