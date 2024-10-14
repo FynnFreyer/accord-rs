@@ -11,12 +11,12 @@ use itertools::Itertools;
 use pyo3::{pyclass, pymethods};
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
-use serde_json::{from_str, to_string};
 
 use data::indel::{Deletion, InDel, Insertion};
 use data::seq::Seq;
 use data::settings::AlnQualityReqs;
 use data::stats::{AlnData, AlnStats};
+use crate::utils::read_file;
 
 /// A list of base counts for every position in the reference sequence.
 type BaseCounts = Vec<Counter<u8>>;
@@ -48,26 +48,9 @@ pub struct Calculator {
 
     /// Vector containing data for all seen alignments.
     aln_data: Vec<AlnData>,
+
+    /// Vector containing positions of considered alignments in the vector of all seen alignments.
     alns_considered: Vec<usize>,
-}
-
-#[pymethods]
-impl Calculator {
-    #[new]
-    pub fn py_new(ref_seq_label: String, ref_seq_string: String, aln_path: String, aln_quality_reqs: String) -> Self {
-        let ref_seq = Seq::from_string(ref_seq_label, ref_seq_string);
-        let aln_quality_reqs = from_str(aln_quality_reqs.as_str()).unwrap();
-        Self::new(ref_seq, aln_path, aln_quality_reqs)
-    }
-
-    /// Calculate consensus and statistics.
-    /// Statistics are passed as JSON string.
-    pub fn py_calculate(&mut self) -> (String, String, String) {
-        let cons = self.compute_consensus();
-        let (stats_total, stats_considered) = self.compute_aln_stats();
-
-        (cons.sequence_string(), to_string(&stats_total).unwrap(), to_string(&stats_considered).unwrap())
-    }
 }
 
 impl Calculator {
@@ -114,9 +97,7 @@ impl Calculator {
 
         (stats_total, stats_considered)
     }
-}
 
-impl Calculator {
     fn use_majority_bases(&self) -> Vec<u8> {
         let mut consensus: Vec<u8> = Vec::with_capacity(self.ref_seq.len());
 
@@ -373,5 +354,28 @@ impl Calculator {
         let indels = reversed.map(|(indel, _count)| indel);
 
         indels.collect::<VecDeque<&InDel>>()
+    }
+}
+
+#[pymethods]
+impl Calculator {
+    #[new]
+    fn py_new(ref_path: String, aln_path: String, aln_quality_reqs: AlnQualityReqs) -> Self {
+        let ref_fasta = read_file(ref_path.as_str());
+        let ref_seq = match Seq::from_fasta(ref_fasta).pop() {
+            None => panic!("No sequence found in fasta file: {ref_path}"),
+            Some(seq) => seq,
+        };
+
+        Self::new(ref_seq, aln_path, aln_quality_reqs)
+    }
+
+    /// Calculate consensus and statistics.
+    #[pyo3(name = "calculate")]
+    fn py_calculate(&mut self) -> (Seq, AlnStats, AlnStats) {
+        let cons = self.compute_consensus();
+        let (stats_total, stats_considered) = self.compute_aln_stats();
+
+        (cons, stats_total, stats_considered)
     }
 }

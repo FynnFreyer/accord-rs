@@ -1,4 +1,4 @@
-use pyo3::pyclass;
+use pyo3::{pyclass, pymethods};
 use rust_htslib::bam::Record;
 use serde::{Deserialize, Serialize};
 
@@ -44,6 +44,14 @@ impl AlnQualityReqs {
         let flags_ok = has_mandatory & no_prohibited;
 
         qual_ok & flags_ok
+    }
+}
+
+#[pymethods]
+impl AlnQualityReqs {
+    #[new]
+    pub fn new(min_mapq: u8, mandatory_flags: u16, prohibited_flags: u16, indel_cutoff: f64, save_ends: usize, min_observations: usize) -> Self {
+        Self { min_mapq, mandatory_flags, prohibited_flags, indel_cutoff, save_ends, min_observations }
     }
 }
 
