@@ -27,13 +27,6 @@ impl Seq {
     }
 
     pub fn label_str(&self) -> &str { &self.label.as_str() }
-    pub fn label_string(&self) -> &String { &self.label }
-
-    /// Get the sequence data as a string, not a vector.
-    pub fn sequence_string(&self) -> String {
-        let seq_bytes = self.sequence.clone();
-        String::from_utf8(seq_bytes).unwrap()
-    }
 
     /// Get the sequence length.
     pub fn len(&self) -> usize { self.sequence.len() }
@@ -130,7 +123,19 @@ impl Seq {
         self.len()
     }
 
-    // _cls: &Bound<'_, PyType>
+    /// Python dunder method for `str`.
+    pub fn __str__(&self) -> String {
+        self.sequence_string()
+    }
+
+    /// Get the label of the `Seq`.
+    pub fn label_string(&self) -> &String { &self.label }
+
+    /// Get the sequence data as a string, not a vector.
+    pub fn sequence_string(&self) -> String {
+        let seq_bytes = self.sequence.clone();
+        String::from_utf8(seq_bytes).unwrap()
+    }
 }
 
 
