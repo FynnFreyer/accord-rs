@@ -28,3 +28,7 @@ build-backend = "maturin"
 features = ["pyo3/extension-module"]
 python-source = "python"
 module-name = "accord._internal"
+include = [
+    { path = "**/*.pyi", format = ["sdist", "wheel"] },
+    { path = "**/py.typed", format = ["sdist", "wheel"] },
+]
