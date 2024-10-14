@@ -14,8 +14,8 @@ pub struct AlnData {
     length: usize,
     mapq: u8,
     flags: u16,
-    score: u8,
-    distance: u8,
+    score: usize,
+    distance: usize,
 }
 
 impl AlnData {
@@ -23,23 +23,27 @@ impl AlnData {
         let length = record.seq_len();
         let mapq = record.mapq();
         let flags = record.flags();
-        let score = Self::extract_u8(record, b"AS");
-        let distance = Self::extract_u8(record, b"NM");
+        let score = Self::extract_unisgned(record, b"AS");
+        let distance = Self::extract_unisgned(record, b"NM");
 
         Self { length, mapq, flags, score, distance }
     }
 
-    fn extract_u8(record: &Record, tag: &[u8]) -> u8 {
+    fn extract_unisgned(record: &Record, tag: &[u8]) -> usize {
         let tag_name = String::from_utf8_lossy(tag);
         match record.aux(tag) {
             Ok(value) => {
                 if let Aux::U8(v) = value {
-                    v
+                    v as usize
+                } else if let Aux::U16(v) = value {
+                    v as usize
+                } else if let Aux::U32(v) = value {
+                    v as usize
                 } else {
-                    panic!("Value in field '{tag_name}' is not of type u8: {value:?}")
+                    panic!("Value in field '{tag_name}' is not of an unsigned type: {value:?}")
                 }
             }
-            Err(e) => panic!("Error extracting field '{tag_name}': {e}")
+            Err(e) => panic!("Error extracting value from field '{tag_name}': {e}")
         }
     }
 }
@@ -125,8 +129,8 @@ impl<T: Num + AsPrimitive<f64> + AsPrimitive<usize> + Sum<T> + Ord + Clone> Dist
 pub struct AlnStats {
     length_distribution: DistributionStats<usize>,
     quality_distribution: DistributionStats<u8>,
-    score_distribution: DistributionStats<u8>,
-    editing_distance_distribution: DistributionStats<u8>,
+    score_distribution: DistributionStats<usize>,
+    editing_distance_distribution: DistributionStats<usize>,
 }
 
 impl AlnStats {
@@ -153,8 +157,8 @@ impl AlnStats {
     fn calculate_distributions(aln_data: &Vec<AlnData>, quantile_factors: &Vec<f64>) -> (
         DistributionStats<usize>,
         DistributionStats<u8>,
-        DistributionStats<u8>,
-        DistributionStats<u8>
+        DistributionStats<usize>,
+        DistributionStats<usize>
     ) {
         let mut lengths = Vec::new();
         let mut qualities = Vec::new();
