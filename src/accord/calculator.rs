@@ -8,6 +8,7 @@ use bam::pileup::Indel;
 use bam::{Read, Reader};
 use counter::Counter;
 use itertools::Itertools;
+use log::debug;
 use pyo3::{pyclass, pymethods};
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
@@ -123,6 +124,7 @@ impl Calculator {
             };
 
             let ref_pos = pileup.pos() as usize;
+            debug!("Analysing pileup in position {ref_pos}.");
 
             for alignment in pileup.alignments() {
                 // the SAM record of the aligned read
@@ -130,9 +132,8 @@ impl Calculator {
 
                 // discard read alignments with insufficient quality, flags, etc.
                 if !self.aln_quality_reqs.is_suitable(&record) {
-                    // TODO: use proper logging
-                    // let read_name = String::from_utf8_lossy(record.qname());  // used for logging
-                    // println!("Skipped low quality alignment for read: {}", read_name);
+                    let read_name = String::from_utf8_lossy(record.qname());
+                    debug!("Skipped low quality alignment for read: {}", read_name);
                     continue;
                 }
 
@@ -143,8 +144,6 @@ impl Calculator {
                 self.update_base_counts(&alignment, &ref_pos);
                 self.update_indel_counts(&alignment, &ref_pos);
             }
-
-            // println!("{}:{} depth {}", pileup.tid(), pileup.pos(), pileup.depth());
         }
     }
 
@@ -164,16 +163,25 @@ impl Calculator {
 
             // increment coverage
             self.coverage[*ref_pos] += 1;
-
-            // TODO: use proper logging
-            // println!("Base {}@{}", base as char, ref_pos);
         }
     }
 
     fn update_indel_counts(&mut self, alignment: &Alignment, ref_pos: &usize) {
+        let record = alignment.record();
+        let read_name = String::from_utf8_lossy(record.qname());
         let indel = match alignment.indel() {
-            Indel::Ins(len) => Self::compute_insertion(len, *ref_pos, &alignment),
-            Indel::Del(len) => Self::compute_deletion(len, *ref_pos),
+            Indel::Ins(len) => {
+                let ins = Self::compute_insertion(len, *ref_pos, &alignment);
+                let start = ins.get_start();
+                debug!("{read_name} contains insertion of length {len} after {start}.");
+                ins
+            }
+            Indel::Del(len) => {
+                let del = Self::compute_deletion(len, *ref_pos);
+                let (start, stop) = (del.get_start(), del.get_stop());
+                debug!("{read_name} contains deletion between positions {start} and {stop}.");
+                del
+            }
             Indel::None => return
         };
         self.indel_counts.update([indel]);
@@ -199,9 +207,6 @@ impl Calculator {
     }
 
     fn compute_deletion(len: u32, ref_pos: usize) -> InDel {
-        // let read_name = String::from_utf8_lossy(record.qname());  // used for logging
-        // println!("{}: Deletion of length {} between this and next position.", read_name, len);
-
         let len = len as usize;
 
         let del_start = ref_pos + 1;
