@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::iter::Iterator;
 
 use bam::pileup::Indel;
@@ -49,6 +49,10 @@ pub struct Calculator {
 
     /// Vector containing data for alignments that were considered in consensus generation.
     aln_data: Vec<AlnData>,
+
+    /// Set of IDs of seen reads, regardless of quality.
+    /// Used for calculating total number of seen reads.
+    reads_seen: HashSet<i32>,
 }
 
 impl Calculator {
@@ -57,6 +61,7 @@ impl Calculator {
         let base_counts = vec![Counter::new(); ref_seq.len()];
         let indel_counts = Counter::new();
         let aln_data = Vec::new();
+        let reads_seen = HashSet::new();
 
         Self {
             ref_seq,
@@ -66,6 +71,7 @@ impl Calculator {
             base_counts,
             indel_counts,
             aln_data,
+            reads_seen,
         }
     }
 
@@ -128,6 +134,10 @@ impl Calculator {
             for alignment in pileup.alignments() {
                 // the SAM record of the aligned read
                 let record = alignment.record();
+
+                // register read as seen
+                let read_id = record.tid();
+                self.reads_seen.insert(read_id);
 
                 // discard read alignments with insufficient quality, flags, etc.
                 if !self.aln_quality_reqs.is_suitable(&record) {
