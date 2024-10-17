@@ -10,10 +10,24 @@ use rust_htslib::bam::Record;
 #[derive(Debug, Clone)]
 #[pyclass]
 pub struct AlnData {
+    /// Length of the aligned sequence.
+    #[pyo3(get)]
     length: usize,
+
+    /// Quality of the alignment.
+    #[pyo3(get)]
     mapq: u8,
+
+    /// SAM flags of the alignment.
+    #[pyo3(get)]
     flags: u16,
+
+    /// Alignment score from 'AS' field.
+    #[pyo3(get)]
     score: usize,
+
+    /// Editing distance from 'NM' field.
+    #[pyo3(get)]
     distance: usize,
 }
 
@@ -48,6 +62,14 @@ impl AlnData {
     }
 }
 
+#[pymethods]
+impl AlnData {
+    fn __repr__(&self) -> String {
+        format!("AlnData(length={}, mapq={}, flags={}, score={}, distance={})",
+                self.length, self.mapq, self.flags, self.score, self.distance)
+    }
+}
+
 /// Struct for quantile data of unsigned integral values.
 ///
 /// Combines a quantile factor and the quantile value.
@@ -55,17 +77,41 @@ impl AlnData {
 #[derive(Debug, Clone)]
 #[pyclass]
 pub struct Quantile {
+    /// Floating point number that describes the percentage cutoff for this quantile.
+    /// Must be in interval $[0, 1]$.
+    #[pyo3(get)]
     factor: f64,
+
+    /// The quantile value.
+    #[pyo3(get)]
     value: usize,
+}
+
+#[pymethods]
+impl Quantile {
+    fn __repr__(&self) -> String {
+        format!("Quantile(factor='{}', value='{}')", self.factor, self.value)
+    }
 }
 
 /// Metrics describing the distribution of *unsigned, integral* data.
 #[derive(Debug, Clone)]
 #[pyclass]
 pub struct DistStats {
+    /// List of quantile values for the distribution.
+    #[pyo3(get)]
     quantiles: Vec<Quantile>,
+
+    /// The sample size $n$.
+    #[pyo3(get)]
     sample_size: usize,
+
+    /// The sample mean $\bar x$.
+    #[pyo3(get)]
     mean: f64,
+
+    /// The sum of squares $\sum_{i = 1}^{n}(x_i - \bar x)^2$.
+    #[pyo3(get)]
     sum_of_squares: f64,
 }
 
@@ -121,12 +167,30 @@ impl DistStats {
     fn py_from_numbers(_cls: &Bound<'_, PyType>, numbers: Vec<usize>, factors: Vec<f64>) -> Self {
         Self::from_numbers(numbers, &factors)
     }
+
+    #[getter]
     pub fn std_deviation(&self) -> f64 {
         self.variance().sqrt()
     }
 
+    #[getter]
     pub fn variance(&self) -> f64 {
         self.sum_of_squares / self.sample_size as f64
+    }
+
+    fn __repr__(&self) -> String {
+        let mut quant_reprs = Vec::new();
+        for quant in &self.quantiles {
+            quant_reprs.push(quant.__repr__())
+        }
+        let mut quant_repr = String::from("[");
+        quant_repr.push_str(quant_reprs.join(", ").as_str());
+        quant_repr.push(']');
+
+        format!(
+            "DistStats(quantiles={quant_repr}, sample_size={}, mean={}, sum_of_squares={})",
+            self.sample_size, self.mean, self.sum_of_squares
+        )
     }
 }
 
@@ -135,10 +199,19 @@ impl DistStats {
 #[derive(Debug, Clone)]
 #[pyclass]
 pub struct AlnStats {
+    #[pyo3(get)]
     length_distribution: DistStats,
+
+    #[pyo3(get)]
     quality_distribution: DistStats,
+
+    #[pyo3(get)]
     score_distribution: DistStats,
+
+    #[pyo3(get)]
     editing_distance_distribution: DistStats,
+
+    #[pyo3(get)]
     total_reads: usize,
 }
 
@@ -193,7 +266,22 @@ impl AlnStats {
         Self::from_data(&data, &factors, total_reads)
     }
 
-    pub fn get_sample_size(&self) -> usize {
+    #[getter]
+    pub fn mapped_reads(&self) -> usize {
         self.length_distribution.sample_size
+    }
+
+    #[getter]
+    pub fn unmapped_reads(&self) -> usize {
+        self.mapped_reads() - self.total_reads
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "length_distribution={}, quality_distribution={}, score_distribution={}, editing_distance_distribution={}, total_reads={}",
+            self.length_distribution.__repr__(), self.quality_distribution.__repr__(),
+            self.score_distribution.__repr__(), self.editing_distance_distribution.__repr__(),
+            self.total_reads
+        )
     }
 }

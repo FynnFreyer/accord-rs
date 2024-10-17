@@ -28,17 +28,21 @@ type InDelCounts = Counter<InDel, usize>;
 #[pyclass]
 pub struct Calculator {
     /// The reference against which the reads were aligned.
+    #[pyo3(get)]
     ref_seq: Seq,
 
     /// Path to a sorted BAM-file with aligned reads.
+    #[pyo3(get)]
     aln_path: String,
 
     /// Settings for alignment quality.
     /// These determine which reads are considered in the consensus calculation.
+    #[pyo3(get)]
     aln_quality_reqs: AlnQualityReqs,
 
     /// Vector containing valid coverage of the reference genome per base position.
     /// Valid means coverage through aligned reads that suffice the quality criteria.
+    #[pyo3(get)]
     coverage: Vec<usize>,
 
     /// Vector with base counts relative to position in reference genome.
@@ -48,10 +52,12 @@ pub struct Calculator {
     indel_counts: InDelCounts,
 
     /// Vector containing data for alignments that were considered in consensus generation.
+    #[pyo3(get)]
     aln_data: Vec<AlnData>,
 
     /// Set of IDs of seen reads, regardless of quality.
     /// Used for calculating total number of seen reads.
+    #[pyo3(get)]
     reads_seen: HashSet<i32>,
 }
 
@@ -81,7 +87,7 @@ impl Calculator {
         let base_calling_consensus = self.use_majority_bases();
         let indel_consensus = self.apply_indels(base_calling_consensus);
 
-        let mut label = String::from(self.ref_seq.label_string());
+        let mut label = String::from(self.ref_seq.get_label());
         label.push_str(".consensus");
 
         Seq::new(label, indel_consensus)

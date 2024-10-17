@@ -1,19 +1,21 @@
 use itertools::Itertools;
 
+use pyo3::{pyclass, pymethods, Bound};
 use std::cmp::min;
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::slice::SliceIndex;
-use pyo3::{pyclass, pymethods, Bound};
 use pyo3::types::PyType;
 
 #[derive(Debug, Clone)]
 #[pyclass]
 pub struct Seq {
-    // path: Path,
+    /// The sequence name.
+    #[pyo3(get)]
     label: String,
-    // `Vec<u8>` allows for O(1) indexing, as opposed to `String`.
-    sequence: Vec<u8>,
+
+    /// The sequence bytes as a vector name.
+    sequence: Vec<u8>,  // `Vec<u8>` allows for O(1) indexing, as opposed to `String`.
 }
 
 impl Seq {
@@ -68,6 +70,31 @@ impl Seq {
         seqs
     }
 
+    /// Get the label of the `Seq`.
+    pub fn get_label(&self) -> &String { &self.label }
+}
+
+#[pymethods]
+impl Seq {
+    #[new]
+    fn py_new(label: String, sequence: String) -> Self {
+        Self::from_string(label, sequence)
+    }
+
+    #[classmethod]
+    #[pyo3(name = "from_fasta")]
+    fn py_from_fasta(_cls: &Bound<'_, PyType>, fasta: String) -> Vec<Self> {
+        Self::from_fasta(fasta)
+    }
+
+    /// Get the sequence data as a string, not a vector.
+    #[getter]
+    #[pyo3(name = "sequence")]
+    fn py_sequence(&self) -> String {
+        let seq_bytes = self.sequence.clone();
+        String::from_utf8(seq_bytes).unwrap()
+    }
+
     /// Convert a `Seq` into a FASTA string.
     pub fn to_fasta(&self) -> String {
         let mut fasta = String::new();
@@ -98,43 +125,30 @@ impl Seq {
 
         fasta
     }
-}
-
-#[pymethods]
-impl Seq {
-    #[new]
-    fn py_new(label: String, sequence: String) -> Self {
-        Self::from_string(label, sequence)
-    }
-
-    #[pyo3(name = "to_fasta")]
-    fn py_to_fasta(&self) -> String {
-        self.to_fasta()
-    }
-
-    #[classmethod]
-    #[pyo3(name = "from_fasta")]
-    fn py_from_fasta(_cls: &Bound<'_, PyType>, fasta: String) -> Vec<Self> {
-        Self::from_fasta(fasta)
-    }
 
     /// Python dunder method for `len`.
-    pub fn __len__(&self) -> usize {
+    /// Returns sequence length, ignoring the label.
+    fn __len__(&self) -> usize {
         self.len()
     }
 
     /// Python dunder method for `str`.
-    pub fn __str__(&self) -> String {
-        self.sequence_string()
+    /// Returns sequence as string, ignoring the label.
+    fn __str__(&self) -> String {
+        self.py_sequence()
     }
 
-    /// Get the label of the `Seq`.
-    pub fn label_string(&self) -> &String { &self.label }
+    fn __repr__(&self) -> String {
+        let seq_string = self.py_sequence();
+        let mut seq = String::new();
+        if seq_string.len() > 20 {
+            seq_string.as_str()[..20].clone_into(&mut seq);
+            seq.push_str("...");
+        } else {
+            seq_string.clone_into(&mut seq)
+        }
 
-    /// Get the sequence data as a string, not a vector.
-    pub fn sequence_string(&self) -> String {
-        let seq_bytes = self.sequence.clone();
-        String::from_utf8(seq_bytes).unwrap()
+        format!("Seq(label='{}', sequence='{seq}')", self.label)
     }
 }
 

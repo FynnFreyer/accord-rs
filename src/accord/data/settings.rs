@@ -6,22 +6,28 @@ use rust_htslib::bam::Record;
 #[pyclass]
 pub struct AlnQualityReqs {
     /// Minimal mapping quality for a read to be considered.
+    #[pyo3(get)]
     pub min_mapq: u8,
 
     /// SAM-flags that must be present for a read to be considered.
+    #[pyo3(get)]
     pub mandatory_flags: u16,
 
     /// SAM-flags that may not be present for a read to be considered.
+    #[pyo3(get)]
     pub prohibited_flags: u16,
 
     /// Percentage of coverage that displays an indel for it to be added to the consensus.
     /// E.g. `0.2` means InDels have to appear in 20% of reads that cover that region to be considered.
+    #[pyo3(get)]
     pub indel_cutoff: f64,
 
     /// Probably useless. Supposed to avoid artificial lengthening of fragments over multiple iterations.
+    #[pyo3(get)]
     pub save_ends: usize,
 
     /// Minimum coverage needed for considering a position in the consensus calculation.
+    #[pyo3(get)]
     pub min_observations: usize,
 }
 
@@ -51,6 +57,13 @@ impl AlnQualityReqs {
     #[new]
     pub fn new(min_mapq: u8, mandatory_flags: u16, prohibited_flags: u16, indel_cutoff: f64, save_ends: usize, min_observations: usize) -> Self {
         Self { min_mapq, mandatory_flags, prohibited_flags, indel_cutoff, save_ends, min_observations }
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "AlnQualityReqs(min_mapq={}, mandatory_flags={}, prohibited_flags={}, indel_cutoff={}, save_ends={}, min_observations={})",
+            self.min_mapq, self.mandatory_flags, self.prohibited_flags, self.indel_cutoff, self.save_ends, self.min_observations
+        )
     }
 }
 

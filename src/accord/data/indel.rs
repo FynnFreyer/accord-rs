@@ -20,6 +20,7 @@ impl InDel {
         }
     }
 
+    /// Get the ending position of this indel, in forward reading direction.
     pub fn get_stop(&self) -> usize {
         match self {
             InDel::Ins(ins) => { ins.position + 1 }
@@ -49,13 +50,6 @@ impl InDel {
         }
     }
 
-    // /// InDels interfere with one another, if they cover the same area.
-    // /// Or in mixed cases (i.e. insertion and deletion), even if they're just directly adjacent.
-    // fn interferes_with(&self, other: &impl InDel) -> bool;
-
-    // /// Apply the InDel to a sequence. This may or may not change the sequence in-place.
-    // fn apply(&self, seq: &mut String) -> &String;
-
     /// Whether this indel preserves the reading frame by only shifting it by a multiple of three.
     pub fn preserves_reading_frame(&self) -> bool { self.len() % 3 == 0 }
 
@@ -73,7 +67,8 @@ impl InDel {
 #[pyclass]
 pub struct Insertion {
     /// Base position directly to the left of the insertion in the forward sequence.
-    pub position: usize,
+    #[pyo3(get)]
+    position: usize,
 
     /// The sequence bytes that have been inserted to the right of the position.
     sequence: Vec<u8>,
@@ -84,15 +79,28 @@ pub struct Insertion {
 impl Insertion {
     #[new]
     pub fn new(position: usize, sequence: Vec<u8>) -> Self { Self { position, sequence } }
+
+    fn __repr__(&self) -> String {
+        format!("Insertion(position={}, sequence='{}')", self.position, self.py_sequence())
+    }
+
+    #[getter]
+    #[pyo3(name = "sequence")]
+    fn py_sequence(&self) -> String {
+        let seq = String::from_utf8_lossy(self.sequence.as_slice());
+        format!("{seq}")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[pyclass]
 pub struct Deletion {
     /// Position of the first base that was affected by this deletion.
+    #[pyo3(get)]
     start: usize,
 
     /// Position of the last base that was affected by this deletion.
+    #[pyo3(get)]
     stop: usize,
 }
 
@@ -100,6 +108,10 @@ pub struct Deletion {
 impl Deletion {
     #[new]
     pub fn new(start: usize, stop: usize) -> Self { Self { start, stop } }
+
+    fn __repr__(&self) -> String {
+        format!("Deletion(start={}, stop={})", self.start, self.stop)
+    }
 }
 
 
