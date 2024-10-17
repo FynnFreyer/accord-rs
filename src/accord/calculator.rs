@@ -1,5 +1,3 @@
-use crate::accord::data;
-
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::iter::Iterator;
@@ -13,6 +11,7 @@ use pyo3::{pyclass, pymethods};
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
 
+use crate::accord::data;
 use crate::utils::read_file;
 use data::indel::{Deletion, InDel, Insertion};
 use data::seq::Seq;
@@ -38,7 +37,7 @@ pub struct Calculator {
     /// These determine which reads are considered in the consensus calculation.
     aln_quality_reqs: AlnQualityReqs,
 
-    /// Vector containing valid coverage of reference genome.
+    /// Vector containing valid coverage of the reference genome per base position.
     /// Valid means coverage through aligned reads that suffice the quality criteria.
     coverage: Vec<usize>,
 
@@ -260,24 +259,6 @@ impl Calculator {
         }
 
         consensus
-
-        // TODO: ask Britta for proper statement as to why
-        // we prefer insertions over deletions (because they "add" information as opposed to dels?)
-        // while !applicable_indels.is_empty() {
-        //     let (indel, indel_count) = match applicable_indels.pop_back() {
-        //         None => panic!("Popped from empty deque in `apply_indels`"),
-        //         Some(indel) => indel,
-        //     };
-        //
-        //     if indel.type_id() == TypeId::of::<Insertion>() {} else {}
-        //
-        //     let has_next = !applicable_indels.is_empty();
-        // }
-        //
-        // for (insertion, count) in valid_insertions {
-        //     println!("{} @ {}, was seen {} times", insertion.seq_string(), insertion.position, count)
-        // }
-
     }
 
     fn get_applicable_indels(&self) -> VecDeque<&InDel> {
