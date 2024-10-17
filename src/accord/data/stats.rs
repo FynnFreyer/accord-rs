@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use log::warn;
 use pyo3::types::PyType;
 use pyo3::{pyclass, pymethods, Bound};
 use rust_htslib::bam::record::Aux;
@@ -89,7 +90,7 @@ impl DistributionStats {
         let sorted_nums = numbers.iter().sorted().collect_vec();
 
         if n < factors.len() {
-            panic!("Trying to determine more quantiles than numbers in sequence.")
+            warn!("Trying to determine more quantiles than numbers in sequence.");
         }
 
         let mut quantiles = Vec::new();
