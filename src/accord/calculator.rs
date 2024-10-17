@@ -12,11 +12,11 @@ use pyo3::{pyclass, pymethods};
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
 
+use crate::utils::read_file;
 use data::indel::{Deletion, InDel, Insertion};
 use data::seq::Seq;
 use data::settings::AlnQualityReqs;
 use data::stats::{AlnData, AlnStats};
-use crate::utils::read_file;
 
 /// A list of base counts for every position in the reference sequence.
 type BaseCounts = Vec<Counter<u8>>;
@@ -37,7 +37,8 @@ pub struct Calculator {
     /// These determine which reads are considered in the consensus calculation.
     aln_quality_reqs: AlnQualityReqs,
 
-    /// Vector with coverage relative to position in reference genome.
+    /// Vector containing valid coverage of reference genome.
+    /// Valid means coverage through aligned reads that suffice the quality criteria.
     coverage: Vec<usize>,
 
     /// Vector with base counts relative to position in reference genome.
@@ -46,11 +47,8 @@ pub struct Calculator {
     /// Map with indel counts.
     indel_counts: InDelCounts,
 
-    /// Vector containing data for all seen alignments.
+    /// Vector containing data for alignments that were considered in consensus generation.
     aln_data: Vec<AlnData>,
-
-    /// Vector containing positions of considered alignments in the vector of all seen alignments.
-    alns_considered: Vec<usize>,
 }
 
 impl Calculator {
@@ -59,7 +57,6 @@ impl Calculator {
         let base_counts = vec![Counter::new(); ref_seq.len()];
         let indel_counts = Counter::new();
         let aln_data = Vec::new();
-        let alns_considered = Vec::new();
 
         Self {
             ref_seq,
@@ -69,7 +66,6 @@ impl Calculator {
             base_counts,
             indel_counts,
             aln_data,
-            alns_considered,
         }
     }
 
@@ -85,17 +81,12 @@ impl Calculator {
         Seq::new(label, indel_consensus)
     }
 
-    /// Compute alignment statistics of all reads that were seen, and those reads considered in the consensus calculation respectively.
-    pub fn compute_aln_stats(&self) -> (AlnStats, AlnStats) {
+    /// Compute alignment statistics for reads considered in the consensus calculation.
+    pub fn compute_aln_stats(&self) -> AlnStats {
         let quantile_factors = vec![0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0];
-        let stats_total = AlnStats::from_data(&self.aln_data, &quantile_factors);
-        let aln_data_considered = self.alns_considered
-            .iter()
-            .map(|i| self.aln_data[*i].clone())
-            .collect_vec();
-        let stats_considered = AlnStats::from_data(&aln_data_considered, &quantile_factors);
+        let stats = AlnStats::from_data(&self.aln_data, &quantile_factors);
 
-        (stats_total, stats_considered)
+        stats
     }
 
     fn use_majority_bases(&self) -> Vec<u8> {
@@ -137,10 +128,6 @@ impl Calculator {
                 // the SAM record of the aligned read
                 let record = alignment.record();
 
-                // TODO only consider good data?
-                let aln_data = AlnData::from_record(&record);
-                self.aln_data.push(aln_data);
-
                 // discard read alignments with insufficient quality, flags, etc.
                 if !self.aln_quality_reqs.is_suitable(&record) {
                     // TODO: use proper logging
@@ -149,7 +136,9 @@ impl Calculator {
                     continue;
                 }
 
-                self.alns_considered.push(self.aln_data.len() - 1);
+                // register valid alignment
+                let aln_data = AlnData::from_record(&record);
+                self.aln_data.push(aln_data);
 
                 self.update_base_counts(&alignment, &ref_pos);
                 self.update_indel_counts(&alignment, &ref_pos);
@@ -372,10 +361,10 @@ impl Calculator {
 
     /// Calculate consensus and statistics.
     #[pyo3(name = "calculate")]
-    fn py_calculate(&mut self) -> (Seq, AlnStats, AlnStats) {
+    fn py_calculate(&mut self) -> (Seq, AlnStats) {
         let cons = self.compute_consensus();
-        let (stats_total, stats_considered) = self.compute_aln_stats();
+        let stats = self.compute_aln_stats();
 
-        (cons, stats_total, stats_considered)
+        (cons, stats)
     }
 }
