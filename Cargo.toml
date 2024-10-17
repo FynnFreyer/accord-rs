@@ -1,6 +1,6 @@
 [package]
 name = "accord-rs"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Fynn Freyer <fynn.freyer@googlemail.com>"]
 edition = "2021"
 description = "Calculate consensus sequences"
@@ -8,6 +8,7 @@ readme = "README.md"
 license-file = "LICENSE"
 repository = "https://github.com/FynnFreyer/accord-rs"
 # documentation = "https://fynnfreyer.github.io/accord-rs"
+exclude = ["assets/*"]
 
 [lib]
 name = "accord"
