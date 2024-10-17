@@ -1,0 +1,6 @@
+from .data import Seq, AlnQualityReqs
+from .data.stats import AlnStats
+
+class Calculator:
+    def __init__(self, ref_path: str, aln_path: str, reqs: AlnQualityReqs): ...
+    def calculate(self) -> tuple[Seq, AlnStats, AlnStats]: ...
