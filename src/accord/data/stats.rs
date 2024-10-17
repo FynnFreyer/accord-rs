@@ -1,3 +1,5 @@
+//! This module provides structs for working with, and summarizing statistical data concerning aligned reads.
+
 use itertools::Itertools;
 use log::warn;
 use pyo3::types::PyType;

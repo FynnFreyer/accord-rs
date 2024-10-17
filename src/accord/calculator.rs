@@ -1,3 +1,5 @@
+//! This module implements the consensus calculation.
+
 use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
 use std::iter::Iterator;
@@ -11,8 +13,8 @@ use pyo3::{pyclass, pymethods};
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
 
-use crate::accord::data;
-use crate::utils::read_file;
+use super::utils::read_file;
+use super::data;
 use data::indel::{Deletion, InDel, Insertion};
 use data::seq::Seq;
 use data::settings::AlnQualityReqs;

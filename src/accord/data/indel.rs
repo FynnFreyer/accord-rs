@@ -1,3 +1,5 @@
+//! Module that provides structs for working with indels.
+
 use pyo3::{pyclass, pymethods};
 use std::hash::Hash;
 use std::ops::RangeInclusive;

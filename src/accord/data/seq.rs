@@ -1,11 +1,12 @@
-use itertools::Itertools;
+//! This module provides a `Seq` struct for working with sequence data.
 
+use itertools::Itertools;
+use pyo3::types::PyType;
 use pyo3::{pyclass, pymethods, Bound};
 use std::cmp::min;
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::slice::SliceIndex;
-use pyo3::types::PyType;
 
 #[derive(Debug, Clone)]
 #[pyclass]

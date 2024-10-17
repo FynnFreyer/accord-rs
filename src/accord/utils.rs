@@ -1,7 +1,9 @@
+//! Module containing utility functions for file IO.
+
+use super::data::seq::Seq;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
-use crate::accord::data::seq::Seq;
 
 pub fn write_file(content: &String, path: &str) -> () {
     //! Helper function to write files.

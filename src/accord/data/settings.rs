@@ -1,3 +1,5 @@
+//! This module contains settings for consensus generation.
+
 use pyo3::{pyclass, pymethods};
 use rust_htslib::bam::Record;
 

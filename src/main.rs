@@ -1,6 +1,5 @@
 mod accord;
-use accord::App;
-mod utils;
+use accord::app::App;
 
 fn main() {
     App::main();
