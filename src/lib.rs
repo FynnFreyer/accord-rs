@@ -49,7 +49,7 @@ mod py_accord {
             #[pymodule_export]
             use stats::Quantile;
             #[pymodule_export]
-            use stats::DistributionStats;
+            use stats::DistStats;
             #[pymodule_export]
             use stats::AlnStats;
         }

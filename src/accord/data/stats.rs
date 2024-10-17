@@ -62,14 +62,14 @@ pub struct Quantile {
 /// Metrics describing the distribution of *unsigned, integral* data.
 #[derive(Debug, Clone)]
 #[pyclass]
-pub struct DistributionStats {
+pub struct DistStats {
     quantiles: Vec<Quantile>,
     sample_size: usize,
     mean: f64,
     sum_of_squares: f64,
 }
 
-impl DistributionStats {
+impl DistStats {
     /// Determine the distribution of some numbers.
     pub fn from_numbers(numbers: Vec<usize>, quantile_factors: &Vec<f64>) -> Self {
         let quantiles = Self::calculate_quants(&numbers, quantile_factors);
@@ -115,7 +115,7 @@ impl DistributionStats {
 }
 
 #[pymethods]
-impl DistributionStats {
+impl DistStats {
     #[classmethod]
     #[pyo3(name = "from_numbers")]
     fn py_from_numbers(_cls: &Bound<'_, PyType>, numbers: Vec<usize>, factors: Vec<f64>) -> Self {
@@ -135,10 +135,10 @@ impl DistributionStats {
 #[derive(Debug, Clone)]
 #[pyclass]
 pub struct AlnStats {
-    length_distribution: DistributionStats,
-    quality_distribution: DistributionStats,
-    score_distribution: DistributionStats,
-    editing_distance_distribution: DistributionStats,
+    length_distribution: DistStats,
+    quality_distribution: DistStats,
+    score_distribution: DistStats,
+    editing_distance_distribution: DistStats,
 }
 
 impl AlnStats {
@@ -158,12 +158,9 @@ impl AlnStats {
         }
     }
 
-    fn calculate_distributions(aln_data: &Vec<AlnData>, quantile_factors: &Vec<f64>) -> (
-        DistributionStats,
-        DistributionStats,
-        DistributionStats,
-        DistributionStats,
-    ) {
+    fn calculate_distributions(aln_data: &Vec<AlnData>, quantile_factors: &Vec<f64>)
+                               -> (DistStats, DistStats, DistStats, DistStats) {
+        // split aln data into seperate vectors
         let mut lengths = Vec::new();
         let mut qualities = Vec::new();
         let mut scores = Vec::new();
@@ -176,10 +173,11 @@ impl AlnStats {
             distances.push(data.distance);
         }
 
-        let length_distribution = DistributionStats::from_numbers(lengths, quantile_factors);
-        let quality_distribution = DistributionStats::from_numbers(qualities, quantile_factors);
-        let score_distribution = DistributionStats::from_numbers(scores, quantile_factors);
-        let editing_distance_distribution = DistributionStats::from_numbers(distances, quantile_factors);
+        // calculate dist stats
+        let length_distribution = DistStats::from_numbers(lengths, quantile_factors);
+        let quality_distribution = DistStats::from_numbers(qualities, quantile_factors);
+        let score_distribution = DistStats::from_numbers(scores, quantile_factors);
+        let editing_distance_distribution = DistStats::from_numbers(distances, quantile_factors);
 
         (length_distribution, quality_distribution, score_distribution, editing_distance_distribution)
     }
