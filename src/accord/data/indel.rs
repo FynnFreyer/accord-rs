@@ -1,6 +1,6 @@
+use pyo3::{pyclass, pymethods};
 use std::hash::Hash;
 use std::ops::RangeInclusive;
-use pyo3::{pyclass, pymethods};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 #[pyclass]
@@ -34,6 +34,10 @@ impl InDel {
             InDel::Ins(ins) => { ins.sequence.len() }
             InDel::Del(del) => { del.start.abs_diff(del.stop) }
         }
+    }
+
+    fn __len__(&self) -> usize {
+        self.len()
     }
 
     /// Get a byte slice corresponding to this events sequence.
