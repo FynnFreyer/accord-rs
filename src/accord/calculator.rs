@@ -37,8 +37,13 @@ pub struct Calculator {
     /// These determine which reads are considered in the consensus calculation.
     aln_quality_reqs: AlnQualityReqs,
 
-    /// Vector with coverage relative to position in reference genome.
-    coverage: Vec<usize>,
+    /// Vector containing valid coverage of reference genome.
+    /// Valid means coverage through aligned reads that suffice the quality criteria.
+    valid_coverage: Vec<usize>,
+
+    /// Vector containing total coverage of reference genome.
+    /// Total means coverage through aligned reads regardless of quality.
+    total_coverage: Vec<usize>,
 
     /// Vector with base counts relative to position in reference genome.
     base_counts: BaseCounts,
@@ -49,27 +54,28 @@ pub struct Calculator {
     /// Vector containing data for all seen alignments.
     aln_data: Vec<AlnData>,
 
-    /// Vector containing positions of considered alignments in the vector of all seen alignments.
-    alns_considered: Vec<usize>,
+    /// Vector containing positions of the alignments that are considered in the consensus calculation.
+    valid_aln_idxs: Vec<usize>,
 }
 
 impl Calculator {
     pub fn new(ref_seq: Seq, aln_path: String, aln_quality_reqs: AlnQualityReqs) -> Self {
-        let coverage = vec![0; ref_seq.len()];
+        let valid_coverage = vec![0; ref_seq.len()];
         let base_counts = vec![Counter::new(); ref_seq.len()];
         let indel_counts = Counter::new();
         let aln_data = Vec::new();
-        let alns_considered = Vec::new();
+        let valid_aln_idxs = Vec::new();
 
         Self {
             ref_seq,
             aln_path,
             aln_quality_reqs,
-            coverage,
+            valid_coverage,
+            total_coverage,
             base_counts,
             indel_counts,
             aln_data,
-            alns_considered,
+            valid_aln_idxs,
         }
     }
 
@@ -89,7 +95,7 @@ impl Calculator {
     pub fn compute_aln_stats(&self) -> (AlnStats, AlnStats) {
         let quantile_factors = vec![0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0];
         let stats_total = AlnStats::from_data(&self.aln_data, &quantile_factors);
-        let aln_data_considered = self.alns_considered
+        let aln_data_considered = self.valid_aln_idxs
             .iter()
             .map(|i| self.aln_data[*i].clone())
             .collect_vec();
@@ -149,9 +155,9 @@ impl Calculator {
                     continue;
                 }
 
-                self.alns_considered.push(self.aln_data.len() - 1);
+                self.valid_aln_idxs.push(self.aln_data.len() - 1);
 
-                self.update_base_counts(&alignment, &ref_pos);
+                self.update_base_counts_and_coverage(&alignment, &ref_pos);
                 self.update_indel_counts(&alignment, &ref_pos);
             }
 
@@ -159,7 +165,7 @@ impl Calculator {
         }
     }
 
-    fn update_base_counts(&mut self, alignment: &Alignment, ref_pos: &usize) {
+    fn update_base_counts_and_coverage(&mut self, alignment: &Alignment, ref_pos: &usize) {
         let record = alignment.record();
         let seq = record.seq();
 
@@ -174,7 +180,7 @@ impl Calculator {
             bases[&base] += 1;
 
             // increment coverage
-            self.coverage[*ref_pos] += 1;
+            self.valid_coverage[*ref_pos] += 1;
 
             // TODO: use proper logging
             // println!("Base {}@{}", base as char, ref_pos);
@@ -300,7 +306,7 @@ impl Calculator {
 
                 let has_min_obs = count > self.aln_quality_reqs.min_observations;
 
-                let indel_cov = &self.coverage[indel.range()];
+                let indel_cov = &self.valid_coverage[indel.range()];
                 let total_cov = indel_cov.iter().sum::<usize>() as f64;
                 let avg_cov = total_cov / indel_cov.len() as f64;
 
