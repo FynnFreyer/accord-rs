@@ -1,9 +1,8 @@
-use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use std::ops::RangeInclusive;
 use pyo3::{pyclass, pymethods};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 #[pyclass]
 pub enum InDel {
     Ins(Insertion),
@@ -66,7 +65,7 @@ impl InDel {
     pub fn range(&self) -> RangeInclusive<usize> { self.get_start()..=self.get_stop() }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[pyclass]
 pub struct Insertion {
     /// Base position directly to the left of the insertion in the forward sequence.
@@ -83,7 +82,7 @@ impl Insertion {
     pub fn new(position: usize, sequence: Vec<u8>) -> Self { Self { position, sequence } }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[pyclass]
 pub struct Deletion {
     /// Position of the first base that was affected by this deletion.

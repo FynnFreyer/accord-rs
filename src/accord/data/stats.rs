@@ -1,13 +1,12 @@
 use itertools::Itertools;
-use pyo3::{pyclass, pymethods, Bound};
 use pyo3::types::PyType;
+use pyo3::{pyclass, pymethods, Bound};
 use rust_htslib::bam::record::Aux;
 use rust_htslib::bam::Record;
-use serde::{Deserialize, Serialize};
 
 
 /// Relevant data for an aligned read.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 #[pyclass]
 pub struct AlnData {
     length: usize,
@@ -52,7 +51,7 @@ impl AlnData {
 ///
 /// Combines a quantile factor and the quantile value.
 /// E.g., with `{ factor: 0.2, value: 3 }` 20 % of values are lower or equal to 3.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 #[pyclass]
 pub struct Quantile {
     factor: f64,
@@ -60,7 +59,7 @@ pub struct Quantile {
 }
 
 /// Metrics describing the distribution of *unsigned, integral* data.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 #[pyclass]
 pub struct DistributionStats {
     quantiles: Vec<Quantile>,
@@ -132,7 +131,7 @@ impl DistributionStats {
 
 /// Statistical data of the seen alignments.
 /// The distribution stats
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 #[pyclass]
 pub struct AlnStats {
     length_distribution: DistributionStats,
