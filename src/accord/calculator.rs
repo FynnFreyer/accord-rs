@@ -90,7 +90,7 @@ impl Calculator {
     /// Compute alignment statistics for reads considered in the consensus calculation.
     pub fn compute_aln_stats(&self) -> AlnStats {
         let quantile_factors = vec![0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0];
-        let stats = AlnStats::from_data(&self.aln_data, &quantile_factors);
+        let stats = AlnStats::from_data(&self.aln_data, &quantile_factors, self.reads_seen.len());
 
         stats
     }

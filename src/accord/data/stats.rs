@@ -139,10 +139,11 @@ pub struct AlnStats {
     quality_distribution: DistStats,
     score_distribution: DistStats,
     editing_distance_distribution: DistStats,
+    total_reads: usize,
 }
 
 impl AlnStats {
-    pub fn from_data(aln_data: &Vec<AlnData>, quantile_factors: &Vec<f64>) -> Self {
+    pub fn from_data(aln_data: &Vec<AlnData>, quantile_factors: &Vec<f64>, total_reads: usize) -> Self {
         let (
             length_distribution,
             quality_distribution,
@@ -155,6 +156,7 @@ impl AlnStats {
             quality_distribution,
             score_distribution,
             editing_distance_distribution,
+            total_reads,
         }
     }
 
@@ -187,8 +189,8 @@ impl AlnStats {
 impl AlnStats {
     #[classmethod]
     #[pyo3(name = "from_data")]
-    fn py_from_data(_cls: &Bound<'_, PyType>, data: Vec<AlnData>, factors: Vec<f64>) -> Self {
-        Self::from_data(&data, &factors)
+    fn py_from_data(_cls: &Bound<'_, PyType>, data: Vec<AlnData>, factors: Vec<f64>, total_reads: usize) -> Self {
+        Self::from_data(&data, &factors, total_reads)
     }
 
     pub fn get_sample_size(&self) -> usize {
