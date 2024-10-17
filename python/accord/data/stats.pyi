@@ -26,5 +26,7 @@ class AlnStats:
     score_distribution: DistStats
     editing_distance_distribution: DistStats
     total_reads: int
+    mapped_reads: int
+    unmapped_reads: int
 
     def from_data(self, data: list[AlnData], factors: list[float], total_reads: int) -> "AlnStats": ...

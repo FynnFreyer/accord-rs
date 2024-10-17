@@ -1,13 +1,26 @@
 class InDel:
     def get_start(self) -> int: ...
+
     def get_stop(self) -> int: ...
+
     def len(self) -> int: ...
+
     def get_seq(self) -> list[int]: ...
+
     def preserves_reading_frame(self) -> bool: ...
+
     def breaks_reading_frame(self) -> bool: ...
 
+
 class Insertion(InDel):
+    position: int
+    sequence: str
+
     def __init__(self, position: int, sequence: list[int]): ...
 
+
 class Deletion(InDel):
+    start: int
+    stop: int
+
     def __init__(self, start: int, stop: int): ...
