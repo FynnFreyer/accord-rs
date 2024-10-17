@@ -62,6 +62,8 @@ jobs:
           command: upload
           args: --non-interactive --skip-existing wheels-*/*
 
+      - uses: actions/checkout@v4
+
       - name: Set up Rust
         run: rustup update stable && rustup default stable
 
