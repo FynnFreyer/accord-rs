@@ -18,12 +18,15 @@ mod py_accord {
     #[pymodule(name = "data")]
     mod py_data {
         use super::*;
+        use data::seq;
+        use data::settings;
+        use data::stats;
 
         #[pymodule_export]
-        use data::seq::Seq;
+        use seq::Seq;
 
         #[pymodule_export]
-        use data::settings::AlnQualityReqs;
+        use settings::AlnQualityReqs;
 
         /// Classes for working with InDels.
         #[pymodule(name = "indel")]
@@ -36,6 +39,19 @@ mod py_accord {
             use data::indel::Deletion;
             #[pymodule_export]
             use data::indel::InDel;
+        }
+
+        /// Classes for working with statistical data.
+        #[pymodule(name = "stats")]
+        mod py_stats {
+            use super::*;
+
+            #[pymodule_export]
+            use stats::Quantile;
+            #[pymodule_export]
+            use stats::DistributionStats;
+            #[pymodule_export]
+            use stats::AlnStats;
         }
     }
 }
