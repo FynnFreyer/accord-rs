@@ -54,7 +54,7 @@ impl AlnData {
 /// E.g., with `{ factor: 0.2, value: 3 }` 20 % of values are lower or equal to 3.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[pyclass]
-struct Quantile {
+pub struct Quantile {
     factor: f64,
     value: usize,
 }
@@ -62,7 +62,7 @@ struct Quantile {
 /// Metrics describing the distribution of *unsigned, integral* data.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[pyclass]
-struct DistributionStats {
+pub struct DistributionStats {
     quantiles: Vec<Quantile>,
     sample_size: usize,
     mean: f64,
