@@ -284,7 +284,8 @@ impl AlnStats {
 
     fn __repr__(&self) -> String {
         format!(
-            "length_distribution={}, quality_distribution={}, score_distribution={}, editing_distance_distribution={}, total_reads={}",
+            "AlnStats(length_distribution={}, quality_distribution={}, \
+            score_distribution={}, editing_distance_distribution={})",
             self.length_distribution.__repr__(), self.quality_distribution.__repr__(),
             self.score_distribution.__repr__(), self.editing_distance_distribution.__repr__(),
             self.total_reads
