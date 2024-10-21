@@ -14,6 +14,10 @@ exclude = ["assets/*"]
 name = "accord"
 crate-type = ["cdylib"]
 
+[[bin]]
+name = "accord"
+path = "src/main.rs"
+
 [dependencies]
 pyo3 = "0.22"
 rust-htslib = "0.46"
