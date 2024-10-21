@@ -4,7 +4,7 @@ use pyo3::{pyclass, pymethods};
 use std::hash::Hash;
 use std::ops::RangeInclusive;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[pyclass]
 pub enum InDel {
     Ins(Insertion),
