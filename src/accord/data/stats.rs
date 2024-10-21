@@ -215,14 +215,10 @@ pub struct AlnStats {
     /// Statistics describing the distribution of alignment editing distances.
     #[pyo3(get)]
     editing_distance_distribution: DistStats,
-
-    /// Total number of seen reads, including those that were not considered for consensus generation.
-    #[pyo3(get)]
-    total_reads: usize,
 }
 
 impl AlnStats {
-    pub fn from_data(aln_data: &Vec<AlnData>, quantile_factors: &Vec<f64>, total_reads: usize) -> Self {
+    pub fn from_data(aln_data: &Vec<AlnData>, quantile_factors: &Vec<f64>) -> Self {
         let (
             length_distribution,
             quality_distribution,
@@ -235,7 +231,6 @@ impl AlnStats {
             quality_distribution,
             score_distribution,
             editing_distance_distribution,
-            total_reads,
         }
     }
 
@@ -268,18 +263,13 @@ impl AlnStats {
 impl AlnStats {
     #[classmethod]
     #[pyo3(name = "from_data")]
-    fn py_from_data(_cls: &Bound<'_, PyType>, data: Vec<AlnData>, factors: Vec<f64>, total_reads: usize) -> Self {
-        Self::from_data(&data, &factors, total_reads)
+    fn py_from_data(_cls: &Bound<'_, PyType>, data: Vec<AlnData>, factors: Vec<f64>) -> Self {
+        Self::from_data(&data, &factors)
     }
 
     #[getter]
-    pub fn mapped_reads(&self) -> usize {
+    pub fn sample_size(&self) -> usize {
         self.length_distribution.sample_size
-    }
-
-    #[getter]
-    pub fn unmapped_reads(&self) -> usize {
-        self.mapped_reads() - self.total_reads
     }
 
     fn __repr__(&self) -> String {
@@ -288,7 +278,6 @@ impl AlnStats {
             score_distribution={}, editing_distance_distribution={})",
             self.length_distribution.__repr__(), self.quality_distribution.__repr__(),
             self.score_distribution.__repr__(), self.editing_distance_distribution.__repr__(),
-            self.total_reads
         )
     }
 }
