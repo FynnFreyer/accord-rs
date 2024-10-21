@@ -1,6 +1,6 @@
 //! `accord-rs` provides simple and fast consensus calculation and offers python bindings.
 //!
-//! This library should be considered an early alpha version, and its API is subject to change without notice.
+//! This library is in the early alpha stage, and its API may be subject to change without notice.
 
 pub mod calculator;
 pub mod data;
