@@ -197,22 +197,26 @@ impl DistStats {
 }
 
 /// Statistical data of the seen alignments.
-/// The distribution stats
 #[derive(Debug, Clone)]
 #[pyclass]
 pub struct AlnStats {
+    /// Statistics describing the distribution of alignment lengths.
     #[pyo3(get)]
     length_distribution: DistStats,
 
+    /// Statistics describing the distribution of alignment quality.
     #[pyo3(get)]
     quality_distribution: DistStats,
 
+    /// Statistics describing the distribution of alignment scores.
     #[pyo3(get)]
     score_distribution: DistStats,
 
+    /// Statistics describing the distribution of alignment editing distances.
     #[pyo3(get)]
     editing_distance_distribution: DistStats,
 
+    /// Total number of seen reads, including those that were not considered for consensus generation.
     #[pyo3(get)]
     total_reads: usize,
 }
