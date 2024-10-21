@@ -6,4 +6,5 @@ pub mod calculator;
 pub mod data;
 pub mod app;
 pub mod cli;
+pub mod settings;
 mod utils;

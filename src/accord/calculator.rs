@@ -13,11 +13,11 @@ use pyo3::{pyclass, pymethods};
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
 
+use super::settings::AlnQualityReqs;
 use super::utils::read_file;
 use super::data;
 use data::indel::{Deletion, InDel, Insertion};
 use data::seq::Seq;
-use data::settings::AlnQualityReqs;
 use data::stats::{AlnData, AlnStats};
 
 /// A list of base counts for every position in the reference sequence.

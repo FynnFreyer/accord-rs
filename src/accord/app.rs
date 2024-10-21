@@ -2,7 +2,7 @@
 
 use super::utils::{get_fasta_seq, write_file};
 use super::calculator::Calculator;
-use super::data::settings::AlnQualityReqs;
+use super::settings::AlnQualityReqs;
 use super::cli::Args;
 
 pub struct App;
