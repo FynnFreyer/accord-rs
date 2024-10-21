@@ -1,34 +1,45 @@
 //! This module contains settings for consensus generation.
 
+use clap::Args;
 use pyo3::{pyclass, pymethods};
 use rust_htslib::bam::Record;
 
 /// Requirements for alignment quality.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Args)]
 #[pyclass]
 pub struct AlnQualityReqs {
     /// Minimal mapping quality for a read to be considered.
+    #[arg(short = 'q', long, alias = "quality", default_value_t = 0)]
     #[pyo3(get)]
     pub min_mapq: u8,
 
     /// SAM-flags that must be present for a read to be considered.
+    #[arg(long, default_value_t = 0)]
     #[pyo3(get)]
     pub mandatory_flags: u16,
 
     /// SAM-flags that may not be present for a read to be considered.
+    #[arg(long, default_value_t = 1540)]
     #[pyo3(get)]
     pub prohibited_flags: u16,
 
     /// Percentage of coverage that displays an indel for it to be added to the consensus.
     /// E.g. `0.2` means InDels have to appear in 20% of reads that cover that region to be considered.
+    #[arg(short = 'c', long)]
     #[pyo3(get)]
     pub indel_cutoff: f64,
 
-    /// Probably useless. Supposed to avoid artificial lengthening of fragments over multiple iterations.
+    /// Has no purpose at this point.
+    ///
+    /// Probably useless.
+    /// Supposed to avoid artificial lengthening of fragments over multiple iterations.
+    /// Included for parity with legacy project.
+    #[arg(short, long, default_value_t = 0)]
     #[pyo3(get)]
     pub save_ends: usize,
 
     /// Minimum coverage needed for considering a position in the consensus calculation.
+    #[arg(long, default_value_t = 50)]
     #[pyo3(get)]
     pub min_observations: usize,
 }

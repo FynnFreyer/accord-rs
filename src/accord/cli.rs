@@ -1,6 +1,7 @@
 //! This module is responsible for parsing CLI arguments.
 
 use clap::Parser;
+use super::settings::AlnQualityReqs;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -16,8 +17,8 @@ pub struct Args {
     pub out_path: String,
 
     /// Alignment quality settings for consensus generation.
-    #[arg(short, long, default_value_t = String::new())]
-    pub aln_reqs: String,
+    #[command(flatten)]
+    pub aln_reqs: AlnQualityReqs,
 }
 
 impl Args {
