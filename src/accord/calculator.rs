@@ -13,8 +13,10 @@ use pyo3::{pyclass, pymethods};
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
 
+use super::data;
 use super::settings::AlnQualityReqs;
 use super::types::{BaseCounts, Coverage, InDelCounts};
+use data::consensus::{AnalysisResult, Consensus};
 use data::indel::{Deletion, InDel, Insertion};
 use data::seq::Seq;
 use data::stats::{AlnData, AlnStats};
@@ -23,86 +25,63 @@ use data::stats::{AlnData, AlnStats};
 #[derive(Debug)]
 #[pyclass]
 pub struct Calculator {
-    /// The reference against which the reads were aligned.
-    #[pyo3(get)]
-    ref_seq: Seq,
-
-    /// Path to a sorted BAM-file with aligned reads.
-    #[pyo3(get)]
-    aln_path: String,
-
     /// Settings for alignment quality.
     /// These determine which reads are considered in the consensus calculation.
     #[pyo3(get)]
     aln_quality_reqs: AlnQualityReqs,
+}
 
-    /// Vector containing valid coverage of the reference genome per base position.
-    /// Valid means coverage through aligned reads that suffice the quality criteria.
-    #[pyo3(get)]
-    coverage: Vec<usize>,
+#[pymethods]
+impl Calculator {
+    #[new]
+    pub fn new(aln_quality_reqs: AlnQualityReqs) -> Self {
+        Self { aln_quality_reqs }
+    }
 
-    /// Vector with base counts relative to position in reference genome.
-    base_counts: BaseCounts,
+    pub fn calculate(&self, ref_seq: Seq, aln_path: String) -> Consensus {
+        //! Calculate a consensus for the passed reference and aligned reads.
+        //!
+        //! - `ref_seq: Seq`: The reference against which the reads were aligned.
+        //! - `aln_path: String`: Path to a sorted BAM-file with aligned reads.
+        //!
+        //! Returns a `Consensus` struct.
 
-    /// Map with indel counts.
-    indel_counts: InDelCounts,
+        let results = self.analyse_alignments(&ref_seq, &aln_path);
 
-    /// Vector containing data for alignments that were considered in consensus generation.
-    #[pyo3(get)]
-    aln_data: Vec<AlnData>,
+        // calculations
+        let consensus_seq = self.compute_consensus(&ref_seq, &results);
+        let aln_stats = self.compute_aln_stats(&results);
 
-    /// Set of IDs of seen reads, regardless of quality.
-    /// Used for calculating total number of seen reads.
-    #[pyo3(get)]
-    reads_seen: HashSet<i32>,
+        Consensus::new(ref_seq, aln_path, consensus_seq, aln_stats, results)
+    }
 }
 
 impl Calculator {
-    pub fn new(ref_seq: Seq, aln_path: String, aln_quality_reqs: AlnQualityReqs) -> Self {
-        let coverage = vec![0; ref_seq.len()];
-        let base_counts = vec![Counter::new(); ref_seq.len()];
-        let indel_counts = Counter::new();
-        let aln_data = Vec::new();
-        let reads_seen = HashSet::new();
-
-        Self {
-            ref_seq,
-            aln_path,
-            aln_quality_reqs,
-            coverage,
-            base_counts,
-            indel_counts,
-            aln_data,
-            reads_seen,
-        }
-    }
-
-    /// Compute the consensus sequence for the seen reads that satisfied the quality criteria.
-    pub fn compute_consensus(&mut self) -> Seq {
-        self.analyse_alignments();
-        let base_calling_consensus = self.use_majority_bases();
-        let indel_consensus = self.apply_indels(base_calling_consensus);
-
-        let mut label = String::from(self.ref_seq.get_label());
+        /// Compute the consensus sequence for the seen reads that satisfied the quality criteria.
+    fn compute_consensus(&self, ref_seq: &Seq, analysis_result: &AnalysisResult) -> Seq {
+        let mut label = String::from(ref_seq.get_label().trim());
         label.push_str(".consensus");
+
+        let base_calling_consensus = self.use_majority_bases(ref_seq, &analysis_result.base_counts);
+        let indel_consensus = self.apply_indels(&ref_seq, base_calling_consensus, &analysis_result);
 
         Seq::new(label, indel_consensus)
     }
 
     /// Compute alignment statistics for reads considered in the consensus calculation.
-    pub fn compute_aln_stats(&self) -> AlnStats {
+    fn compute_aln_stats(&self, analysis_result: &AnalysisResult) -> AlnStats {
         let quantile_factors = vec![0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0];
-        let stats = AlnStats::from_data(&self.aln_data, &quantile_factors);
+        let stats = AlnStats::from_data(&analysis_result.valid_alns, &quantile_factors);
 
         stats
     }
 
-    fn use_majority_bases(&self) -> Vec<u8> {
-        let mut consensus: Vec<u8> = Vec::with_capacity(self.ref_seq.len());
+    fn use_majority_bases(&self, ref_seq: &Seq, base_counts: &BaseCounts) -> Vec<u8> {
+        let mut consensus_seq: Vec<u8> = Vec::with_capacity(ref_seq.len());
 
-        for (ref_pos, base_counter) in self.base_counts.iter().enumerate() {
+        for (ref_pos, base_counter) in base_counts.iter().enumerate() {
             // get original base at `ref_pos`
-            let reference_base = self.ref_seq[ref_pos];
+            let reference_base = ref_seq[ref_pos];
 
             // determine consensus by simple majority
             let consensus_base;
@@ -115,14 +94,24 @@ impl Calculator {
                 consensus_base = if sufficient_observations { most_common } else { reference_base };
             }
 
-            consensus.push(consensus_base);
+            consensus_seq.push(consensus_base);
         }
 
-        consensus
+        consensus_seq
     }
 
-    fn analyse_alignments(&mut self) {
-        let mut alns = Reader::from_path(self.aln_path.as_str()).unwrap();
+    fn analyse_alignments(&self, ref_seq: &Seq, aln_path: &String) -> AnalysisResult {
+        let mut alns = match Reader::from_path(aln_path.as_str()) {
+            Ok(reader) => reader,
+            Err(e) => panic!("Unable to open BAM file: {e}")
+        };
+
+        let mut coverage = vec![0; ref_seq.len()];
+        let mut base_counts = vec![Counter::new(); ref_seq.len()];
+        let mut reads_seen = HashSet::new();
+        let mut indel_counts = Counter::new();
+        let mut valid_alns = Vec::new();
+
         for p in alns.pileup() {
             // `pileup` holds references to all reads that were aligned to a specific position
             let pileup = match p {
@@ -139,7 +128,7 @@ impl Calculator {
 
                 // register read as seen
                 let read_id = record.tid();
-                self.reads_seen.insert(read_id);
+                reads_seen.insert(read_id);
 
                 // discard read alignments with insufficient quality, flags, etc.
                 if !self.aln_quality_reqs.is_suitable(&record) {
@@ -150,15 +139,19 @@ impl Calculator {
 
                 // register valid alignment
                 let aln_data = AlnData::from_record(&record);
-                self.aln_data.push(aln_data);
+                valid_alns.push(aln_data);
 
-                self.update_base_counts(&alignment, &ref_pos);
-                self.update_indel_counts(&alignment, &ref_pos);
+                self.register_position(&alignment, &ref_pos, &mut base_counts, &mut coverage);
+                self.register_indels(&alignment, &ref_pos, &mut indel_counts);
             }
         }
+
+        AnalysisResult::new(coverage, base_counts, indel_counts, valid_alns, reads_seen)
     }
 
-    fn update_base_counts(&mut self, alignment: &Alignment, ref_pos: &usize) {
+    fn register_position(&self, alignment: &Alignment, ref_pos: &usize, base_counts: &mut BaseCounts, coverage: &mut Coverage) {
+        //! Register alignment for position relative to the reference sequence, and update coverage and base counts.
+
         let record = alignment.record();
         let seq = record.seq();
 
@@ -168,16 +161,16 @@ impl Calculator {
             let read_pos = alignment.qpos().unwrap();
 
             // register the base of this read in this position
-            let bases = &mut self.base_counts[*ref_pos];
+            let bases = &mut base_counts[*ref_pos];
             let base = seq[read_pos];
             bases[&base] += 1;
 
             // increment coverage
-            self.coverage[*ref_pos] += 1;
+            coverage[*ref_pos] += 1;
         }
     }
 
-    fn update_indel_counts(&mut self, alignment: &Alignment, ref_pos: &usize) {
+    fn register_indels(&self, alignment: &Alignment, ref_pos: &usize, indel_counts: &mut InDelCounts) {
         let record = alignment.record();
         let read_name = String::from_utf8_lossy(record.qname());
         let indel = match alignment.indel() {
@@ -195,7 +188,7 @@ impl Calculator {
             }
             Indel::None => return
         };
-        self.indel_counts.update([indel]);
+        indel_counts.update([indel]);
     }
 
     fn compute_insertion(len: u32, ref_pos: usize, alignment: &Alignment) -> InDel {
@@ -227,9 +220,9 @@ impl Calculator {
         InDel::Del(del)
     }
 
-    fn apply_indels(&self, seq_bytes: Vec<u8>) -> Vec<u8> {
-        let applicable_indels = self.get_applicable_indels();
-        let ref_len = self.ref_seq.len();
+    fn apply_indels(&self, ref_seq: &Seq, seq_bytes: Vec<u8>, analysis_result: &AnalysisResult) -> Vec<u8> {
+        let applicable_indels = self.get_applicable_indels(&analysis_result.indel_counts, &analysis_result.coverage);
+        let ref_len = ref_seq.len();
 
         // we prepend string slices to this vector from which we later construct the consensus
         let mut vd: VecDeque<&[u8]> = VecDeque::new();
@@ -273,21 +266,19 @@ impl Calculator {
         consensus
     }
 
-    fn get_applicable_indels(&self) -> VecDeque<&InDel> {
+    fn get_applicable_indels<'a>(&self, indel_counts: &'a InDelCounts, coverage: &Coverage) -> VecDeque<&'a InDel> {
         //! Get a vector of indel references, where indels are filtered by whether they're
         //! applicable, and ordered from back to front, for easy insertion.
 
-        let iter = self.indel_counts.iter();
-
         // filter indels by whether they have sufficient observations and
         // by whether they make the percentage cutoff for this positions coverage
-        let filtered_by_coverage = iter.filter(
+        let filtered_by_coverage = indel_counts.iter().filter(
             |(indel, count)| {
                 let count = **count;
 
                 let has_min_obs = count > self.aln_quality_reqs.min_observations;
 
-                let indel_cov = &self.coverage[indel.range()];
+                let indel_cov = &coverage[indel.range()];
                 let total_cov = indel_cov.iter().sum::<usize>() as f64;
                 let avg_cov = total_cov / indel_cov.len() as f64;
 
@@ -341,28 +332,5 @@ impl Calculator {
         let indels = reversed.map(|(indel, _count)| indel);
 
         indels.collect::<VecDeque<&InDel>>()
-    }
-}
-
-#[pymethods]
-impl Calculator {
-    #[new]
-    fn py_new(ref_path: String, aln_path: String, aln_quality_reqs: AlnQualityReqs) -> Self {
-        let ref_fasta = read_file(ref_path.as_str());
-        let ref_seq = match Seq::from_fasta(ref_fasta).pop() {
-            None => panic!("No sequence found in fasta file: {ref_path}"),
-            Some(seq) => seq,
-        };
-
-        Self::new(ref_seq, aln_path, aln_quality_reqs)
-    }
-
-    /// Calculate consensus and statistics.
-    #[pyo3(name = "calculate")]
-    fn py_calculate(&mut self) -> (Seq, AlnStats) {
-        let cons = self.compute_consensus();
-        let stats = self.compute_aln_stats();
-
-        (cons, stats)
     }
 }

@@ -22,11 +22,10 @@ impl App {
         let ref_seq = get_fasta_seq(&args.ref_path);
         let aln_path = args.aln_path;
 
-        let mut calculator = Calculator::new(ref_seq, aln_path, DEFAULT_REQS);
-        let consensus = calculator.compute_consensus();
-        let fasta = consensus.to_fasta();
-
-        let stats = calculator.compute_aln_stats();
+        let calculator = Calculator::new(DEFAULT_REQS);
+        let consensus = calculator.calculate(ref_seq, aln_path);
+        let fasta = consensus.get_consensus_seq().to_fasta();
+        let stats = consensus.get_aln_stats();
 
         if args.out_path != "-" {
             write_file(&fasta, args.out_path.as_str());
