@@ -267,6 +267,7 @@ impl AlnStats {
         Self::from_data(&data, &factors)
     }
 
+    /// Number of reads that these statistics were generated from.
     #[getter]
     pub fn sample_size(&self) -> usize {
         self.length_distribution.sample_size
