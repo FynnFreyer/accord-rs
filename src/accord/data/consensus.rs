@@ -33,7 +33,7 @@ pub struct Consensus {
 
     /// A mapping from base characters to coverage for the respective base, relative to the reference sequence.
     #[pyo3(get)]
-    base_counts: HashMap<char, Vec<usize>>,
+    base_counts: ExpandedBaseCounts,
 
     /// Vector containing the applied indels.
     #[pyo3(get)]

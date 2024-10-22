@@ -14,19 +14,13 @@ use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
 
 use super::settings::AlnQualityReqs;
-use super::utils::read_file;
-use super::data;
+use super::types::{BaseCounts, Coverage, InDelCounts};
 use data::indel::{Deletion, InDel, Insertion};
 use data::seq::Seq;
 use data::stats::{AlnData, AlnStats};
 
-/// A list of base counts for every position in the reference sequence.
-type BaseCounts = Vec<Counter<u8>>;
-
-/// A map in which encountered insertions point to their respective number of occurrences.
-type InDelCounts = Counter<InDel, usize>;
-
-
+/// A consensus calculator.
+#[derive(Debug)]
 #[pyclass]
 pub struct Calculator {
     /// The reference against which the reads were aligned.
