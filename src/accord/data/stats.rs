@@ -46,7 +46,7 @@ impl AlnData {
     }
 
     fn extract_unisgned(record: &Record, tag: &[u8]) -> usize {
-        let tag_name = String::from_utf8_lossy(tag);
+        let _tag_name = String::from_utf8_lossy(tag);
         match record.aux(tag) {
             Ok(value) => {
                 if let Aux::U8(v) = value {
@@ -56,10 +56,10 @@ impl AlnData {
                 } else if let Aux::U32(v) = value {
                     v as usize
                 } else {
-                    panic!("Value in field '{tag_name}' is not of an unsigned type: {value:?}")
+                    panic!("Value in field '{_tag_name}' is not of an unsigned type: {value:?}")
                 }
             }
-            Err(e) => panic!("Error extracting value from field '{tag_name}': {e}")
+            Err(_e) => panic!("Error extracting value from field '{_tag_name}': {_e}")
         }
     }
 }

@@ -103,7 +103,7 @@ impl Calculator {
     fn analyse_alignments(&self, ref_seq: &Seq, aln_path: &String) -> AnalysisResult {
         let mut alns = match Reader::from_path(aln_path.as_str()) {
             Ok(reader) => reader,
-            Err(e) => panic!("Unable to open BAM file: {e}")
+            Err(_e) => panic!("Unable to open BAM file: {_e}")
         };
 
         let mut coverage = vec![0; ref_seq.len()];
@@ -116,7 +116,7 @@ impl Calculator {
             // `pileup` holds references to all reads that were aligned to a specific position
             let pileup = match p {
                 Ok(p) => p,
-                Err(e) => panic!("Unable to generate pileup: {e}"),
+                Err(_e) => panic!("Unable to generate pileup: {_e}"),
             };
 
             let ref_pos = pileup.pos() as usize;
