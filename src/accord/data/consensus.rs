@@ -1,11 +1,44 @@
 //! This module provides the `Consensus` struct, summarizing the result of a consensus calculation.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use super::indel::InDel;
-use super::seq::Seq;
-use super::stats::AlnStats;
 use pyo3::{pyclass, pymethods};
+
+use super::super::types::{BaseCounts, InDelCounts, Coverage, ExpandedBaseCounts};
+use super::seq::Seq;
+use super::stats::{AlnData, AlnStats};
+
+/// Intermediary results of analysing aligned reads.
+#[derive(Debug, Clone)]
+#[pyclass]
+pub struct AnalysisResult {
+    /// Vector containing valid coverage of the reference genome per base position.
+    /// Valid means coverage through aligned reads that suffice the quality criteria.
+    #[pyo3(get)]
+    pub coverage: Vec<usize>,
+
+    /// Vector with base counts relative to position in reference genome.
+    pub base_counts: BaseCounts,
+
+    /// Map with indel counts.
+    pub indel_counts: InDelCounts,
+
+    /// Vector containing data for alignments that were considered in consensus generation.
+    #[pyo3(get)]
+    pub valid_alns: Vec<AlnData>,
+
+    /// Set of IDs of seen reads, regardless of quality.
+    /// Used for calculating total number of seen reads.
+    #[pyo3(get)]
+    pub reads_seen: HashSet<i32>,
+}
+
+
+impl AnalysisResult {
+    pub fn new(coverage: Coverage, base_counts: BaseCounts, indel_counts: InDelCounts, valid_alns: Vec<AlnData>, reads_seen: HashSet<i32>) -> Self {
+        Self { coverage, base_counts, indel_counts, valid_alns, reads_seen }
+    }
+}
 
 /// Summarizes the result of calculating a consensus.
 #[derive(Debug, Clone)]
@@ -78,7 +111,7 @@ impl Consensus {
     /// Number of reads seen, that **were not** considered in the consensus generation.
     #[getter]
     pub fn invalid_reads(&self) -> usize {
-        self.mapped_reads() - self.total_reads
+        self.valid_reads() - self.total_reads
     }
 
     fn __repr__(&self) -> String {
