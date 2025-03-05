@@ -17,16 +17,16 @@ impl InDel {
     /// That means the left side start of the event when considering forward direction.
     pub fn get_start(&self) -> usize {
         match self {
-            InDel::Ins(ins) => { ins.position }
-            InDel::Del(del) => { del.start }
+            InDel::Ins(ins) => ins.position,
+            InDel::Del(del) => del.start,
         }
     }
 
     /// Get the ending position of this indel, in forward reading direction.
     pub fn get_stop(&self) -> usize {
         match self {
-            InDel::Ins(ins) => { ins.position + 1 }
-            InDel::Del(del) => { del.stop }
+            InDel::Ins(ins) => ins.position + 1,
+            InDel::Del(del) => del.stop,
         }
     }
 
@@ -34,8 +34,8 @@ impl InDel {
     /// and for deletions, how many bases are spanned by the deletion.
     pub fn len(&self) -> usize {
         match self {
-            InDel::Ins(ins) => { ins.sequence.len() }
-            InDel::Del(del) => { del.start.abs_diff(del.stop) }
+            InDel::Ins(ins) => ins.sequence.len(),
+            InDel::Del(del) => del.start.abs_diff(del.stop),
         }
     }
 
@@ -47,22 +47,28 @@ impl InDel {
     /// I.e. what should be inserted between event start and stop.
     pub fn get_seq(&self) -> &[u8] {
         match self {
-            InDel::Ins(ins) => { ins.sequence.as_slice() }
-            InDel::Del(_) => { &[] }
+            InDel::Ins(ins) => ins.sequence.as_slice(),
+            InDel::Del(_) => &[],
         }
     }
 
     /// Whether this indel preserves the reading frame by only shifting it by a multiple of three.
-    pub fn preserves_reading_frame(&self) -> bool { self.len() % 3 == 0 }
+    pub fn preserves_reading_frame(&self) -> bool {
+        self.len() % 3 == 0
+    }
 
     /// Whether this indel breaks the reading frame,  by shifting it by a non-multiple of three.
-    pub fn breaks_reading_frame(&self) -> bool { !self.preserves_reading_frame() }
+    pub fn breaks_reading_frame(&self) -> bool {
+        !self.preserves_reading_frame()
+    }
 }
 
 impl InDel {
     /// Base positions spanning the event site as an inclusive range `start..=stop`.
     /// Start and stop are independent of read direction, and you may assume order `start <= stop`.
-    pub fn range(&self) -> RangeInclusive<usize> { self.get_start()..=self.get_stop() }
+    pub fn range(&self) -> RangeInclusive<usize> {
+        self.get_start()..=self.get_stop()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -76,14 +82,19 @@ pub struct Insertion {
     sequence: Vec<u8>,
 }
 
-
 #[pymethods]
 impl Insertion {
     #[new]
-    pub fn new(position: usize, sequence: Vec<u8>) -> Self { Self { position, sequence } }
+    pub fn new(position: usize, sequence: Vec<u8>) -> Self {
+        Self { position, sequence }
+    }
 
     fn __repr__(&self) -> String {
-        format!("Insertion(position={}, sequence='{}')", self.position, self.py_sequence())
+        format!(
+            "Insertion(position={}, sequence='{}')",
+            self.position,
+            self.py_sequence()
+        )
     }
 
     #[getter]
@@ -109,13 +120,14 @@ pub struct Deletion {
 #[pymethods]
 impl Deletion {
     #[new]
-    pub fn new(start: usize, stop: usize) -> Self { Self { start, stop } }
+    pub fn new(start: usize, stop: usize) -> Self {
+        Self { start, stop }
+    }
 
     fn __repr__(&self) -> String {
         format!("Deletion(start={}, stop={})", self.start, self.stop)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -123,9 +135,13 @@ mod tests {
     fn indel_test() {
         todo!("Write Insertion and Deletion tests!")
     }
+
+    #[test]
     fn indel_interference() {
         todo!("Write Insertion and Deletion tests!")
     }
+
+    #[test]
     fn indel_range() {
         todo!("Write Insertion and Deletion tests!")
     }

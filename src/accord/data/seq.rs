@@ -16,7 +16,7 @@ pub struct Seq {
     label: String,
 
     /// The sequence bytes as a vector name.
-    sequence: Vec<u8>,  // `Vec<u8>` allows for O(1) indexing, as opposed to `String`.
+    sequence: Vec<u8>, // `Vec<u8>` allows for O(1) indexing, as opposed to `String`.
 }
 
 impl Seq {
@@ -29,10 +29,14 @@ impl Seq {
         Self::new(label, sequence)
     }
 
-    pub fn label_str(&self) -> &str { &self.label.as_str() }
+    pub fn label_str(&self) -> &str {
+        &self.label.as_str()
+    }
 
     /// Get the sequence length.
-    pub fn len(&self) -> usize { self.sequence.len() }
+    pub fn len(&self) -> usize {
+        self.sequence.len()
+    }
 
     /// Parse `Seq`s from a FASTA string.
     pub fn from_fasta(fasta: String) -> Vec<Self> {
@@ -47,7 +51,8 @@ impl Seq {
         for (is_label, lines_group) in groups {
             // collect the actual lines into a vector
             let lines = lines_group.collect::<Vec<&str>>();
-            if is_label {  // this is a label group
+            if is_label {
+                // this is a label group
                 if lines.len() > 1 {
                     // throw if the fasta has more than one label line
                     panic!("More than one label line:\n{:?}", lines)
@@ -57,7 +62,8 @@ impl Seq {
                 let clean_label = lines[0][1..].trim();
                 // set the label string
                 label_string = String::from(clean_label);
-            } else {  // this group contains sequence data
+            } else {
+                // this group contains sequence data
                 // clone the label, so we can move it
                 let label = label_string.clone();
                 // get the sequence data as bytes
@@ -72,7 +78,9 @@ impl Seq {
     }
 
     /// Get the label of the `Seq`.
-    pub fn get_label(&self) -> &String { &self.label }
+    pub fn get_label(&self) -> &String {
+        &self.label
+    }
 }
 
 #[pymethods]
@@ -106,7 +114,7 @@ impl Seq {
         fasta.push('\n');
 
         // write sequence
-        let width = 80;  // lines wrap after 80 chars
+        let width = 80; // lines wrap after 80 chars
         let lines = self.sequence.len().div_ceil(width);
         let len = self.sequence.len();
         for line in 0..lines {
@@ -117,7 +125,7 @@ impl Seq {
             let line_slice = &self.sequence[start..end];
             let line_content = match std::str::from_utf8(line_slice) {
                 Ok(s) => s,
-                Err(e) => panic!("Unable to convert Seq into string: {}", e)
+                Err(e) => panic!("Unable to convert Seq into string: {}", e),
             };
 
             fasta.push_str(line_content);
@@ -153,7 +161,6 @@ impl Seq {
     }
 }
 
-
 impl Display for Seq {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let seq = self.to_fasta();
@@ -163,7 +170,9 @@ impl Display for Seq {
 
 impl<Idx: SliceIndex<[u8]>> Index<Idx> for Seq {
     type Output = Idx::Output;
-    fn index(&self, index: Idx) -> &Self::Output { self.sequence.index(index) }
+    fn index(&self, index: Idx) -> &Self::Output {
+        self.sequence.index(index)
+    }
 }
 
 #[cfg(test)]
@@ -178,23 +187,32 @@ mod tests {
 
     #[test]
     fn test_seq() {
-        let mut seqs = Seq::from_file("assets/K03455.fasta");
+        use std::fs;
+        let fasta = match fs::read_to_string("assets/K03455.fasta") {
+            Ok(content) => content,
+            Err(e) => panic!("{e}"),
+        };
+
+        let mut seqs = Seq::from_fasta(fasta);
 
         // correct number of sequences
         assert_eq!(seqs.len(), 1);
 
         let reference = match seqs.pop() {
-            None => panic!("No ref (wat?!)"),  // shouldn't happen because we check len before
-            Some(seq) => seq
+            None => panic!("No ref (wat?!)"), // shouldn't happen because we check len before
+            Some(seq) => seq,
         };
 
         // label was read correctly
-        assert_eq!(reference.label, "HXB2_K03455 (Human_immunodeficiency_virus_type_1-complete_genome)");
+        assert_eq!(
+            reference.label,
+            "HXB2_K03455 (Human_immunodeficiency_virus_type_1-complete_genome)"
+        );
 
         // sequence was read correctly
         assert_eq!(reference.sequence.len(), 9719);
-        assert!(reference.sequence_string().starts_with("TGGAAGGGCTAATTCACTCCCAACGAAGACAAGATATCC"));
-        assert!(reference.sequence_string().ends_with("CCCTCAGACCCTTTTAGTCAGTGTGGAAAATCTCTAGCA"));
+        let ref_seq_string = reference.get_sequence_as_string();
+        assert!(ref_seq_string.starts_with("TGGAAGGGCTAATTCACTCCCAACGAAGACAAGATATCC"));
+        assert!(ref_seq_string.ends_with("CCCTCAGACCCTTTTAGTCAGTGTGGAAAATCTCTAGCA"));
     }
 }
-
