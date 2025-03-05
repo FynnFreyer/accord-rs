@@ -14,9 +14,6 @@ mod py_accord {
     #[pymodule_export]
     use calculator::Calculator;
 
-    #[pymodule_export]
-    use settings::AlnQualityReqs;
-
     /// Holds classes for handling sequence data, settings, results etc.
     #[pymodule(name = "data")]
     mod py_data {
@@ -27,6 +24,9 @@ mod py_accord {
         #[pymodule_export]
         use seq::Seq;
 
+        #[pymodule_export]
+        use settings::AlnQualityReqs;
+        
         /// Classes for working with InDels.
         #[pymodule(name = "indel")]
         mod py_indel {
