@@ -81,6 +81,13 @@ impl Seq {
     pub fn get_label(&self) -> &String {
         &self.label
     }
+
+    pub fn get_sequence(&self) -> &Vec<u8> {
+        &self.sequence
+    }
+    pub fn get_sequence_as_string(&self) -> String {
+        String::from_utf8(self.sequence.clone()).unwrap()
+    }
 }
 
 #[pymethods]
