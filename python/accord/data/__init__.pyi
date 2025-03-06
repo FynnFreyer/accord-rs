@@ -24,6 +24,9 @@ class Seq:
     @classmethod
     def from_fasta(cls, fasta: str) -> Sequence["Seq"]: ...
 
+    @classmethod
+    def from_file(cls, file: str) -> Sequence["Seq"]: ...
+
     def to_fasta(self) -> str: ...
 
 

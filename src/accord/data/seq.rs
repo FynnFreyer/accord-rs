@@ -4,7 +4,9 @@ use itertools::Itertools;
 use pyo3::types::PyType;
 use pyo3::{pyclass, pymethods, Bound};
 use std::cmp::min;
+use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::fs;
 use std::ops::Index;
 use std::slice::SliceIndex;
 
@@ -77,6 +79,14 @@ impl Seq {
         seqs
     }
 
+    pub fn from_file(file: String) -> Vec<Self> {
+        let content = match fs::read_to_string(file) {
+            Ok(content) => content,
+            Err(e) => panic!("{e}"),
+        };
+        Self::from_fasta(content)
+    }
+
     /// Get the label of the `Seq`.
     pub fn get_label(&self) -> &String {
         &self.label
@@ -109,6 +119,12 @@ impl Seq {
     fn py_sequence(&self) -> String {
         let seq_bytes = self.sequence.clone();
         String::from_utf8(seq_bytes).unwrap()
+    }
+
+    #[classmethod]
+    #[pyo3(name = "from_file")]
+    pub fn py_from_file(_cls: &Bound<'_, PyType>, file: String) -> Vec<Self> {
+        Self::from_file(file)
     }
 
     /// Convert a `Seq` into a FASTA string.
