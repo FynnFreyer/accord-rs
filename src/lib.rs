@@ -28,21 +28,20 @@ mod py_accord {
         use consensus::Consensus;
         #[pymodule_export]
         use seq::Seq;
-
         #[pymodule_export]
         use settings::AlnQualityReqs;
-        
+
         /// Classes for working with InDels.
         #[pymodule(name = "indel")]
         mod py_indel {
             use super::*;
 
             #[pymodule_export]
-            use data::indel::Insertion;
-            #[pymodule_export]
             use data::indel::Deletion;
             #[pymodule_export]
             use data::indel::InDel;
+            #[pymodule_export]
+            use data::indel::Insertion;
         }
 
         /// Classes for working with statistical data.
@@ -51,11 +50,11 @@ mod py_accord {
             use super::*;
 
             #[pymodule_export]
-            use stats::Quantile;
+            use stats::AlnStats;
             #[pymodule_export]
             use stats::DistStats;
             #[pymodule_export]
-            use stats::AlnStats;
+            use stats::Quantile;
         }
     }
 }
