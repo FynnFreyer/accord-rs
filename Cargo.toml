@@ -7,7 +7,7 @@ description = "Calculate consensus sequences"
 readme = "README.md"
 license-file = "LICENSE"
 repository = "https://github.com/FynnFreyer/accord-rs"
-# documentation = "https://fynnfreyer.github.io/accord-rs"
+# documentation = "https://docs.accord.rs"
 exclude = ["assets/*"]
 
 [lib]
