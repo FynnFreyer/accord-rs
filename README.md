@@ -28,8 +28,6 @@ reqs = AlnQualityReqs(
 calc = Calculator(reqs)
 consensus = calc.calculate("/path/to/reference.fasta", "/path/to/aln.bam")
 
-aln_path = "/home/fynn/Desktop/HIV/HIV-Pipeline/out/02_mapping/alignments/200626_20-07149_HIV20-00278_F483_9_MiS85_S1_L000_001.cyc01.bam"
-ref_path = "/home/fynn/Desktop/HIV/HIV-Pipeline/tst/assets/references/HXB2_K03455.fasta"
 # print the consensus as a FASTA record
 print(consensus.consensus_seq.to_fasta())
 ```
