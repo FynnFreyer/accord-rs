@@ -18,9 +18,14 @@ mod py_accord {
     #[pymodule(name = "data")]
     mod py_data {
         use super::*;
+        use data::consensus;
         use data::seq;
         use data::stats;
 
+        #[pymodule_export]
+        use consensus::AnalysisResult;
+        #[pymodule_export]
+        use consensus::Consensus;
         #[pymodule_export]
         use seq::Seq;
 

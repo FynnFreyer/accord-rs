@@ -1,4 +1,6 @@
-from typing import Sequence
+from typing import Sequence, Set, Mapping
+
+from .stats import AlnData, AlnStats
 
 
 class AlnQualityReqs:
@@ -23,3 +25,21 @@ class Seq:
     def from_fasta(cls, fasta: str) -> Sequence["Seq"]: ...
 
     def to_fasta(self) -> str: ...
+
+
+class AnalysisResult:
+    coverage: Sequence[int]
+    valid_alns: Sequence[AlnData]
+    reads_seen: Set[int]
+
+
+class Consensus:
+    ref_seq: Seq
+    aln_path: str
+    consensus_seq: Seq
+    aln_stats: AlnStats
+    coverage: Sequence[int]
+    base_counts: Mapping[str, Sequence[int]]
+    total_reads: int
+    valid_reads: int
+    invalid_reads: int
