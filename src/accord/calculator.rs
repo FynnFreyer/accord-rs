@@ -70,7 +70,9 @@ impl Calculator {
 
     /// Compute alignment statistics for reads considered in the consensus calculation.
     fn compute_aln_stats(&self, analysis_result: &AnalysisResult) -> AlnStats {
-        let quantile_factors = vec![0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0];
+        let quantile_factors = vec![
+            0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0,
+        ];
         let stats = AlnStats::from_data(&analysis_result.valid_alns, &quantile_factors);
 
         stats
@@ -85,13 +87,20 @@ impl Calculator {
 
             // determine consensus by simple majority
             let consensus_base;
-            if base_counter.is_empty() {  // no coverage -> use reference base
+            if base_counter.is_empty() {
+                // no coverage -> use reference base
                 consensus_base = reference_base;
-            } else {  // has coverage
+            } else {
+                // has coverage
                 let (most_common, observations) = *base_counter.most_common().first().unwrap();
-                let sufficient_observations = observations >= self.aln_quality_reqs.min_observations;
+                let sufficient_observations =
+                    observations >= self.aln_quality_reqs.min_observations;
 
-                consensus_base = if sufficient_observations { most_common } else { reference_base };
+                consensus_base = if sufficient_observations {
+                    most_common
+                } else {
+                    reference_base
+                };
             }
 
             consensus_seq.push(consensus_base);
@@ -103,7 +112,7 @@ impl Calculator {
     fn analyse_alignments(&self, ref_seq: &Seq, aln_path: &String) -> AnalysisResult {
         let mut alns = match Reader::from_path(aln_path.as_str()) {
             Ok(reader) => reader,
-            Err(_e) => panic!("Unable to open BAM file: {_e}")
+            Err(_e) => panic!("Unable to open BAM file: {_e}"),
         };
 
         let mut coverage = vec![0; ref_seq.len()];
@@ -149,7 +158,13 @@ impl Calculator {
         AnalysisResult::new(coverage, base_counts, indel_counts, valid_alns, reads_seen)
     }
 
-    fn register_position(&self, alignment: &Alignment, ref_pos: &usize, base_counts: &mut BaseCounts, coverage: &mut Coverage) {
+    fn register_position(
+        &self,
+        alignment: &Alignment,
+        ref_pos: &usize,
+        base_counts: &mut BaseCounts,
+        coverage: &mut Coverage,
+    ) {
         //! Register alignment for position relative to the reference sequence, and update coverage and base counts.
 
         let record = alignment.record();
@@ -170,7 +185,12 @@ impl Calculator {
         }
     }
 
-    fn register_indels(&self, alignment: &Alignment, ref_pos: &usize, indel_counts: &mut InDelCounts) {
+    fn register_indels(
+        &self,
+        alignment: &Alignment,
+        ref_pos: &usize,
+        indel_counts: &mut InDelCounts,
+    ) {
         let record = alignment.record();
         let read_name = String::from_utf8_lossy(record.qname());
         let indel = match alignment.indel() {
@@ -186,7 +206,7 @@ impl Calculator {
                 debug!("{read_name} contains deletion between positions {start} and {stop}.");
                 del
             }
-            Indel::None => return
+            Indel::None => return,
         };
         indel_counts.update([indel]);
     }
@@ -220,8 +240,14 @@ impl Calculator {
         InDel::Del(del)
     }
 
-    fn apply_indels(&self, ref_seq: &Seq, seq_bytes: Vec<u8>, analysis_result: &AnalysisResult) -> Vec<u8> {
-        let applicable_indels = self.get_applicable_indels(&analysis_result.indel_counts, &analysis_result.coverage);
+    fn apply_indels(
+        &self,
+        ref_seq: &Seq,
+        seq_bytes: Vec<u8>,
+        analysis_result: &AnalysisResult,
+    ) -> Vec<u8> {
+        let applicable_indels =
+            self.get_applicable_indels(&analysis_result.indel_counts, &analysis_result.coverage);
         let ref_len = ref_seq.len();
 
         // we prepend string slices to this vector from which we later construct the consensus
@@ -234,12 +260,13 @@ impl Calculator {
             let event_stop = indel.get_stop();
 
             // skip if this indel interferes with the last applied indel
-            let interferes
-                = prev_event_start < event_stop  // events overlap
-                || prev_event_start.abs_diff(event_stop) <= 1;  // events are adjacent
+            let interferes = prev_event_start < event_stop  // events overlap
+                || prev_event_start.abs_diff(event_stop) <= 1; // events are adjacent
             let is_first = prev_event_start == ref_len;
             let skip = interferes && !is_first;
-            if skip { continue; }
+            if skip {
+                continue;
+            }
 
             // add unaffected sequence part in between events
             let between_range = event_stop + 1..prev_event_start;
@@ -266,37 +293,44 @@ impl Calculator {
         consensus
     }
 
-    fn get_applicable_indels<'a>(&self, indel_counts: &'a InDelCounts, coverage: &Coverage) -> VecDeque<&'a InDel> {
+    fn get_applicable_indels<'a>(
+        &self,
+        indel_counts: &'a InDelCounts,
+        coverage: &Coverage,
+    ) -> VecDeque<&'a InDel> {
         //! Get a vector of indel references, where indels are filtered by whether they're
         //! applicable, and ordered from back to front, for easy insertion.
 
         // filter indels by whether they have sufficient observations and
         // by whether they make the percentage cutoff for this positions coverage
-        let filtered_by_coverage = indel_counts.iter().filter(
-            |(indel, count)| {
-                let count = **count;
+        let filtered_by_coverage = indel_counts.iter().filter(|(indel, count)| {
+            let count = **count;
 
-                let has_min_obs = count > self.aln_quality_reqs.min_observations;
+            let has_min_obs = count > self.aln_quality_reqs.min_observations;
 
-                let indel_cov = &coverage[indel.range()];
-                let total_cov = indel_cov.iter().sum::<usize>() as f64;
-                let avg_cov = total_cov / indel_cov.len() as f64;
+            let indel_cov = &coverage[indel.range()];
+            let total_cov = indel_cov.iter().sum::<usize>() as f64;
+            let avg_cov = total_cov / indel_cov.len() as f64;
 
-                let required_cov = avg_cov * self.aln_quality_reqs.indel_cutoff;
-                let has_required_cov = required_cov <= count as f64;
+            let required_cov = avg_cov * self.aln_quality_reqs.indel_cutoff;
+            let has_required_cov = required_cov <= count as f64;
 
-                has_min_obs && has_required_cov
-            });
+            has_min_obs && has_required_cov
+        });
 
         // resolve order preferentially, where importance looks like so:
         // position > count > orf breakage > type
-        let ordered_by_preference = filtered_by_coverage.sorted_by(
-            |(indel_a, count_a), (indel_b, count_b)| {
+        let ordered_by_preference =
+            filtered_by_coverage.sorted_by(|(indel_a, count_a), (indel_b, count_b)| {
                 let pos_cmp = indel_a.get_start().cmp(&indel_b.get_start());
-                if !matches!(pos_cmp, Ordering::Equal) { return pos_cmp; }
+                if !matches!(pos_cmp, Ordering::Equal) {
+                    return pos_cmp;
+                }
 
                 let count_cmp = count_a.cmp(count_b);
-                if !matches!(count_cmp, Ordering::Equal) { return count_cmp; }
+                if !matches!(count_cmp, Ordering::Equal) {
+                    return count_cmp;
+                }
 
                 let pref_a = indel_a.preserves_reading_frame() && indel_b.breaks_reading_frame();
                 let pref_b = indel_b.preserves_reading_frame() && indel_a.breaks_reading_frame();
@@ -308,7 +342,9 @@ impl Calculator {
                 } else {
                     orf_breakage = Ordering::Equal;
                 };
-                if !matches!(orf_breakage, Ordering::Equal) { return orf_breakage; }
+                if !matches!(orf_breakage, Ordering::Equal) {
+                    return orf_breakage;
+                }
 
                 // TODO: ask Britta for proper statement as to why
                 // we prefer insertions over deletions (because they "add" information as opposed to dels?)
