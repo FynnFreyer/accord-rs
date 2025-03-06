@@ -28,8 +28,5 @@ class AlnStats:
     quality_distribution: DistStats
     score_distribution: DistStats
     editing_distance_distribution: DistStats
-    total_reads: int
-    mapped_reads: int
-    unmapped_reads: int
 
     def from_data(self, data: Sequence[AlnData], factors: Sequence[float], total_reads: int) -> "AlnStats": ...
