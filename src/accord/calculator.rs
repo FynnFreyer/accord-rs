@@ -38,6 +38,26 @@ impl Calculator {
         Self { aln_quality_reqs }
     }
 
+    #[pyo3(name = "calculate")]
+    pub fn py_calculate(&self, ref_path: String, aln_path: String) -> Consensus {
+        //! Calculate a consensus for the passed reference and aligned reads.
+        //!
+        //! - `ref_path: String`: Path to the reference against which the reads were aligned.
+        //! - `aln_path: String`: Path to a sorted BAM-file with aligned reads.
+        //!
+        //! Returns a `Consensus` struct.
+        let mut seqs = Seq::from_file(ref_path.clone());
+
+        let ref_seq = match seqs.pop() {
+            None => panic!("No sequences in file: {ref_path}"),
+            Some(seq) => seq,
+        };
+
+        self.calculate(ref_seq, aln_path)
+    }
+}
+
+impl Calculator {
     pub fn calculate(&self, ref_seq: Seq, aln_path: String) -> Consensus {
         //! Calculate a consensus for the passed reference and aligned reads.
         //!
@@ -54,10 +74,8 @@ impl Calculator {
 
         Consensus::new(ref_seq, aln_path, consensus_seq, aln_stats, results)
     }
-}
 
-impl Calculator {
-        /// Compute the consensus sequence for the seen reads that satisfied the quality criteria.
+    /// Compute the consensus sequence for the seen reads that satisfied the quality criteria.
     fn compute_consensus(&self, ref_seq: &Seq, analysis_result: &AnalysisResult) -> Seq {
         let mut label = String::from(ref_seq.get_label().trim());
         label.push_str(".consensus");
