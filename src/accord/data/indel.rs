@@ -30,15 +30,6 @@ impl InDel {
         }
     }
 
-    /// The length of this indel event. For Insertions, how long the inserted sequence is,
-    /// and for deletions, how many bases are spanned by the deletion.
-    pub fn len(&self) -> usize {
-        match self {
-            InDel::Ins(ins) => ins.sequence.len(),
-            InDel::Del(del) => del.start.abs_diff(del.stop),
-        }
-    }
-
     fn __len__(&self) -> usize {
         self.len()
     }
@@ -68,6 +59,15 @@ impl InDel {
     /// Start and stop are independent of read direction, and you may assume order `start <= stop`.
     pub fn range(&self) -> RangeInclusive<usize> {
         self.get_start()..=self.get_stop()
+    }
+
+    /// The length of this indel event. For Insertions, how long the inserted sequence is,
+    /// and for deletions, how many bases are spanned by the deletion.
+    pub fn len(&self) -> usize {
+        match self {
+            InDel::Ins(ins) => ins.sequence.len(),
+            InDel::Del(del) => del.start.abs_diff(del.stop),
+        }
     }
 }
 
