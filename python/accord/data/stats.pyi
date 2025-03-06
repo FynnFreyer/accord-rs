@@ -1,3 +1,6 @@
+from typing import Sequence
+
+
 class AlnData:
     length: int
     mapq: int
@@ -12,7 +15,7 @@ class Quantile:
 
 
 class DistStats:
-    quantiles: list[Quantile]
+    quantiles: Sequence[Quantile]
     sample_size: int
     mean: float
     sum_of_squares: float
@@ -29,4 +32,4 @@ class AlnStats:
     mapped_reads: int
     unmapped_reads: int
 
-    def from_data(self, data: list[AlnData], factors: list[float], total_reads: int) -> "AlnStats": ...
+    def from_data(self, data: Sequence[AlnData], factors: Sequence[float], total_reads: int) -> "AlnStats": ...

@@ -1,3 +1,6 @@
+from typing import Sequence
+
+
 class AlnQualityReqs:
     min_mapq: int
     mandatory_flags: int
@@ -17,6 +20,6 @@ class Seq:
     def __init__(self, label: str, sequence: str): ...
 
     @classmethod
-    def from_fasta(cls, fasta: str) -> list["Seq"]: ...
+    def from_fasta(cls, fasta: str) -> Sequence["Seq"]: ...
 
     def to_fasta(self) -> str: ...
