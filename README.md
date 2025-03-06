@@ -12,7 +12,7 @@ Install with `pip install accord-rs`, and then use like so:
 
 ```python
 from accord import Calculator
-from accord.data import AlnQualityReqs, Seq
+from accord.data import AlnQualityReqs
 
 # settings for consensus calculation
 reqs = AlnQualityReqs(
