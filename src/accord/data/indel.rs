@@ -13,6 +13,7 @@ pub enum InDel {
 
 #[pymethods]
 impl InDel {
+    // TODO: rephrase this in terms of 5' and 3' ends
     /// Get the starting position of this indel event, independent of read direction.
     /// That means the left side start of the event when considering forward direction.
     pub fn get_start(&self) -> usize {
