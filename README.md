@@ -1,8 +1,11 @@
 # accord-rs
 
-To bring something into accord (*/əˈkɔrd/*) is to make it agree or correspond.
-The `accord-rs` library calculates a consensus from reads that where aligned against a reference sequence.
+The `accord-rs` library calculates a consensus sequence from reads that where aligned against a reference sequence.
 
+To bring something into accord (*/əˈkɔrd/*) is to make it agree or correspond.
+In German "Akkordarbeit" (piecework) is used to imply that something is done fast.
+
+**BEWARE**:  
 This library is in the early alpha stage, and its API may be subject to change without notice.
 
 ## Python
