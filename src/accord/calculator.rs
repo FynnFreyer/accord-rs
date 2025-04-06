@@ -98,13 +98,11 @@ impl Calculator {
 
     /// Compute the consensus sequence for the seen reads that satisfied the quality criteria.
     fn compute_consensus(&self, ref_seq: &Seq, analysis_result: &AnalysisResult) -> Seq {
-        let label = ref_seq.get_label().trim();
-        let description = format!("{label} <generated consensus>");
-
+        let label = ref_seq.get_label().clone();
         let base_calling_consensus = self.use_majority_bases(ref_seq, &analysis_result.base_counts);
         let indel_consensus = self.apply_indels(&ref_seq, base_calling_consensus, &analysis_result);
-
-        Seq::new(description, indel_consensus)
+        
+        Seq::new(label, indel_consensus)
     }
 
     /// Compute alignment statistics for reads considered in the consensus calculation.
