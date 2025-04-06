@@ -33,7 +33,7 @@ class Seq:
 class AnalysisResult:
     coverage: Sequence[int]
     valid_alns: Sequence[AlnData]
-    reads_seen: Set[int]
+    reads_seen: Set[str]
 
 
 class Consensus:

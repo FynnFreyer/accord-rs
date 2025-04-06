@@ -30,12 +30,12 @@ pub struct AnalysisResult {
     /// Set of IDs of seen reads, regardless of quality.
     /// Used for calculating total number of seen reads.
     #[pyo3(get)]
-    pub reads_seen: HashSet<i32>,
+    pub reads_seen: HashSet<String>,
 }
 
 
 impl AnalysisResult {
-    pub fn new(coverage: Coverage, base_counts: BaseCounts, indel_counts: InDelCounts, valid_alns: Vec<AlnData>, reads_seen: HashSet<i32>) -> Self {
+    pub fn new(coverage: Coverage, base_counts: BaseCounts, indel_counts: InDelCounts, valid_alns: Vec<AlnData>, reads_seen: HashSet<String>) -> Self {
         Self { coverage, base_counts, indel_counts, valid_alns, reads_seen }
     }
 }

@@ -156,7 +156,7 @@ impl Calculator {
                 let record = alignment.record();
 
                 // register read as seen
-                let read_id = record.tid();
+                let read_id = String::from_utf8(record.qname().to_vec()).unwrap();
                 reads_seen.insert(read_id);
 
                 // discard read alignments with insufficient quality, flags, etc.
