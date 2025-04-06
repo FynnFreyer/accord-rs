@@ -127,8 +127,10 @@ impl Calculator {
         consensus_seq
     }
 
-    fn analyse_alignments(&self, ref_seq: &Seq, aln_path: &String) -> AnalysisResult {
-        let mut alns = match Reader::from_path(aln_path.as_str()) {
+    fn analyse_alignments(&self, ref_seq: &Seq, aln_path: &str) -> AnalysisResult {
+        //! Gets a "simple majority" consensus that doesn't consider indels.
+
+        let mut alns = match Reader::from_path(aln_path) {
             Ok(reader) => reader,
             Err(_e) => panic!("Unable to open BAM file: {_e}"),
         };
@@ -213,7 +215,7 @@ impl Calculator {
         let read_name = String::from_utf8_lossy(record.qname());
         let indel = match alignment.indel() {
             Indel::Ins(len) => {
-                let ins = Self::compute_insertion(len, *ref_pos, &alignment);
+                let ins = Self::compute_insertion(len, *ref_pos, alignment);
                 let start = ins.get_start();
                 debug!("{read_name} contains insertion of length {len} after {start}.");
                 ins
