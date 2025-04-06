@@ -1,25 +1,29 @@
 //! This module implements the consensus calculation.
 
-use std::cmp::Ordering;
-use std::collections::{HashSet, VecDeque};
-use std::iter::Iterator;
-
+use bam::index::{build, Type};
 use bam::pileup::Indel;
-use bam::{Read, Reader};
+use bam::{IndexedReader, Read};
 use counter::Counter;
 use itertools::Itertools;
 use log::debug;
 use pyo3::{pyclass, pymethods};
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
+use std::cmp::Ordering;
+use std::collections::{HashSet, VecDeque};
+use std::iter::Iterator;
+use std::path::Path;
 
 use super::data;
 use super::settings::AlnQualityReqs;
 use super::types::{BaseCounts, Coverage, InDelCounts};
+use crate::accord::utils::change_suffix;
 use data::consensus::{AnalysisResult, Consensus};
 use data::indel::{Deletion, InDel, Insertion};
 use data::seq::Seq;
 use data::stats::{AlnData, AlnStats};
+
+const THREADS: u32 = 16;
 
 /// A consensus calculator.
 #[derive(Debug)]
@@ -39,51 +43,68 @@ impl Calculator {
     }
 
     #[pyo3(name = "calculate")]
-    pub fn py_calculate(&self, ref_path: String, aln_path: String) -> Consensus {
+    pub fn calculate_from_path(&self, ref_path: String, aln_path: String) -> Vec<Consensus> {
         //! Calculate a consensus for the passed reference and aligned reads.
         //!
         //! - `ref_path: String`: Path to the reference against which the reads were aligned.
         //! - `aln_path: String`: Path to a sorted BAM-file with aligned reads.
         //!
         //! Returns a `Consensus` struct.
-        let mut seqs = Seq::from_file(ref_path.clone());
-
-        let ref_seq = match seqs.pop() {
-            None => panic!("No sequences in file: {ref_path}"),
-            Some(seq) => seq,
-        };
-
-        self.calculate(ref_seq, aln_path)
+        let ref_seqs = Seq::from_file(&ref_path);
+        self.calculate(ref_seqs, aln_path)
     }
 }
 
 impl Calculator {
-    pub fn calculate(&self, ref_seq: Seq, aln_path: String) -> Consensus {
+    pub fn calculate(&self, ref_seqs: Vec<Seq>, aln_path: String) -> Vec<Consensus> {
         //! Calculate a consensus for the passed reference and aligned reads.
         //!
         //! - `ref_seq: Seq`: The reference against which the reads were aligned.
         //! - `aln_path: String`: Path to a sorted BAM-file with aligned reads.
         //!
         //! Returns a `Consensus` struct.
+        let mut aln_reader = Self::read_with_index(&aln_path);
+        let mut consensus_vec = Vec::new();
+        for ref_seq in ref_seqs {
+            let results = self.analyse_alignments(&ref_seq, &mut aln_reader);
 
-        let results = self.analyse_alignments(&ref_seq, &aln_path);
+            // calculations
+            let consensus_seq = self.compute_consensus(&ref_seq, &results);
+            let aln_stats = self.compute_aln_stats(&results);
 
-        // calculations
-        let consensus_seq = self.compute_consensus(&ref_seq, &results);
-        let aln_stats = self.compute_aln_stats(&results);
+            let consensus = Consensus::new(ref_seq, aln_path.clone(), consensus_seq, aln_stats, results);
+            consensus_vec.push(consensus)
+        }
+        consensus_vec
+    }
 
-        Consensus::new(ref_seq, aln_path, consensus_seq, aln_stats, results)
+    fn read_with_index(aln_path: &String) -> IndexedReader {
+        // build index if necessary
+        let idx_path = change_suffix(aln_path, "bai");
+        let dest = Path::new(&idx_path);
+        if !dest.exists() {
+            match build(&aln_path, Some(&&idx_path), Type::Bai, THREADS) {
+                Ok(_) => {}
+                Err(_e) => panic!("Failed to index alignments at {aln_path}: {_e}")
+            }
+        }
+
+        // create an indexed reader
+        match IndexedReader::from_path_and_index(aln_path, &idx_path) {
+            Ok(reader) => reader,
+            Err(_e) => panic!("Unable to open BAM file: {_e}"),
+        }
     }
 
     /// Compute the consensus sequence for the seen reads that satisfied the quality criteria.
     fn compute_consensus(&self, ref_seq: &Seq, analysis_result: &AnalysisResult) -> Seq {
-        let mut label = String::from(ref_seq.get_label().trim());
-        label.push_str(".consensus");
+        let label = ref_seq.get_label().trim();
+        let description = format!("{label} <generated consensus>");
 
         let base_calling_consensus = self.use_majority_bases(ref_seq, &analysis_result.base_counts);
         let indel_consensus = self.apply_indels(&ref_seq, base_calling_consensus, &analysis_result);
 
-        Seq::new(label, indel_consensus)
+        Seq::new(description, indel_consensus)
     }
 
     /// Compute alignment statistics for reads considered in the consensus calculation.
@@ -127,25 +148,27 @@ impl Calculator {
         consensus_seq
     }
 
-    fn analyse_alignments(&self, ref_seq: &Seq, aln_path: &str) -> AnalysisResult {
-        //! Gets a "simple majority" consensus that doesn't consider indels.
+    fn analyse_alignments(&self, ref_seq: &Seq, aln_reader: &mut IndexedReader) -> AnalysisResult {
+        //! Does a pileup over the passed `ref_seq` and generates an `AnalysisResult`.
+        //! This analysis result is later used to compute the consensus.
 
-        let mut alns = match Reader::from_path(aln_path) {
-            Ok(reader) => reader,
-            Err(_e) => panic!("Unable to open BAM file: {_e}"),
-        };
-
+        // instantiate vectors for analysis
         let mut coverage = vec![0; ref_seq.len()];
         let mut base_counts = vec![Counter::new(); ref_seq.len()];
         let mut reads_seen = HashSet::new();
         let mut indel_counts = Counter::new();
         let mut valid_alns = Vec::new();
 
-        for p in alns.pileup() {
-            // `pileup` holds references to all reads that were aligned to a specific position
+        // define region for retrieving pileups, based on name of passed `ref_seq`
+        // a "pileup" holds references to all reads that were aligned to a specific position
+        aln_reader.fetch(ref_seq.get_label()).unwrap();
+        for p in aln_reader.pileup() {
             let pileup = match p {
                 Ok(p) => p,
-                Err(_e) => panic!("Unable to generate pileup: {_e}"),
+                Err(_e) => {
+                    debug!("Unable to generate pileup: {_e}");
+                    continue;
+                }
             };
 
             let ref_pos = pileup.pos() as usize;
