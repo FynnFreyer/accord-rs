@@ -57,3 +57,8 @@ pub fn get_fasta_seq(fasta_path: &String) -> Seq {
     ref_seq
 }
 
+pub fn change_suffix(path: &String, new_suffix: &str) -> String {
+    let path = Path::new(path);
+    let new_path = path.with_extension(new_suffix);
+    new_path.to_str().unwrap().to_string()
+}
