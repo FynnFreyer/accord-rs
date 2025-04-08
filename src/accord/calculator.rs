@@ -23,7 +23,7 @@ use data::indel::{Deletion, InDel, Insertion};
 use data::seq::Seq;
 use data::stats::{AlnData, AlnStats};
 
-const THREADS: u32 = 16;
+const THREADS: u32 = 1;
 
 /// A consensus calculator.
 #[derive(Debug)]
