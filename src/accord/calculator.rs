@@ -81,12 +81,9 @@ impl Calculator {
     fn read_with_index(aln_path: &String) -> IndexedReader {
         // build index if necessary
         let idx_path = change_suffix(aln_path, "bai");
-        let dest = Path::new(&idx_path);
-        if !dest.exists() {
-            match build(&aln_path, Some(&&idx_path), Type::Bai, THREADS) {
-                Ok(_) => {}
-                Err(_e) => panic!("Failed to index alignments at {aln_path}: {_e}")
-            }
+        match build(&aln_path, Some(&&idx_path), Type::Bai, THREADS) {
+            Ok(_) => {}
+            Err(_e) => panic!("Failed to index alignments at {aln_path}: {_e}")
         }
 
         // create an indexed reader
