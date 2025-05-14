@@ -12,7 +12,6 @@ use rust_htslib::bam::pileup::Alignment;
 use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
 use std::iter::Iterator;
-use std::path::Path;
 
 use super::data;
 use super::settings::AlnQualityReqs;
@@ -156,7 +155,10 @@ impl Calculator {
 
         // define region for retrieving pileups, based on name of passed `ref_seq`
         // a "pileup" holds references to all reads that were aligned to a specific position
-        aln_reader.fetch(ref_seq.get_label()).unwrap();
+        let stats = aln_reader.index_stats();
+        let label = ref_seq.get_label();
+        let first_part = label.split(" ").next().unwrap();
+        aln_reader.fetch(first_part).unwrap();
         for p in aln_reader.pileup() {
             let pileup = match p {
                 Ok(p) => p,
