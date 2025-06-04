@@ -139,6 +139,7 @@ impl DistStats {
 
         if n < factors.len() {
             warn!("Trying to determine more quantiles than numbers in sequence.");
+            return Vec::new();
         }
 
         let mut quantiles = Vec::new();
