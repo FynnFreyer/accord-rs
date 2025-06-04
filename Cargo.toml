@@ -1,6 +1,6 @@
 [package]
 name = "accord-rs"
-version = "0.0.7"
+version = "0.0.8"
 authors = ["Fynn Freyer <fynn.freyer@googlemail.com>"]
 edition = "2021"
 description = "Calculate consensus sequences"
