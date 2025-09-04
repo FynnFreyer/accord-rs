@@ -5,7 +5,7 @@ use bam::pileup::Indel;
 use bam::{IndexedReader, Read};
 use counter::Counter;
 use itertools::Itertools;
-use log::debug;
+use log::{debug, info, warn};
 use pyo3::{pyclass, pymethods};
 use rust_htslib::bam;
 use rust_htslib::bam::pileup::Alignment;
@@ -62,6 +62,8 @@ impl Calculator {
         //! - `aln_path: String`: Path to a sorted BAM-file with aligned reads.
         //!
         //! Returns a `Consensus` struct.
+        info!("Calculating consensus for {aln_path}");
+
         let mut aln_reader = Self::read_with_index(&aln_path);
         let mut consensus_vec = Vec::new();
         for ref_seq in ref_seqs {
@@ -97,7 +99,7 @@ impl Calculator {
         let label = ref_seq.get_label().clone();
         let base_calling_consensus = self.use_majority_bases(ref_seq, &analysis_result.base_counts);
         let indel_consensus = self.apply_indels(&ref_seq, base_calling_consensus, &analysis_result);
-        
+
         Seq::new(label, indel_consensus)
     }
 
@@ -302,9 +304,11 @@ impl Calculator {
             // skip if this indel interferes with the last applied indel
             let interferes = prev_event_start < event_stop  // events overlap
                 || prev_event_start.abs_diff(event_stop) <= 1; // events are adjacent
+            // interference isn't properly calculated for indels on right edge, so first indel is never skipped
             let is_first = prev_event_start == ref_len;
             let skip = interferes && !is_first;
             if skip {
+                warn!("Skipping indel application on position {event_stop} because of interference with previously applied indel.");
                 continue;
             }
 
@@ -312,8 +316,10 @@ impl Calculator {
             let between_range = event_stop + 1..prev_event_start;
             let between = &seq_bytes[between_range];
             vd.push_front(between);
+
             // add event sequence
             vd.push_front(indel.get_seq());
+
             // amend positional cutoff for next iteration
             prev_event_start = indel.get_start();
         }
