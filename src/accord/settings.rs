@@ -25,7 +25,7 @@ pub struct AlnQualityReqs {
 
     /// Percentage of coverage that displays an indel for it to be added to the consensus.
     /// E.g. `0.2` means InDels have to appear in 20% of reads that cover that region to be considered.
-    #[arg(short = 'c', long)]
+    #[arg(short = 'c', long, default_value_t = 0.2)]
     #[pyo3(get)]
     pub indel_cutoff: f64,
 
