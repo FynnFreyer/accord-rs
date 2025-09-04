@@ -10,20 +10,11 @@ pub struct App;
 
 impl App {
     pub fn main() {
-        const DEFAULT_REQS: AlnQualityReqs = AlnQualityReqs {
-            min_mapq: 10,
-            mandatory_flags: 0,
-            prohibited_flags: 0,
-            indel_cutoff: 0.2,
-            save_ends: 24,
-            min_observations: 50,
-        };
-
         let args = Args::parse_args();
         let ref_seqs = Seq::from_file(&args.ref_path);
         let aln_path = args.aln_path;
 
-        let calculator = Calculator::new(DEFAULT_REQS);
+        let calculator = Calculator::new(args.aln_reqs);
         let consensuses = calculator.calculate(ref_seqs, aln_path);
 
         let mut fastas = Vec::new();
