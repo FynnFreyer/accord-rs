@@ -26,7 +26,7 @@ impl InDel {
     /// Get the ending position of this indel, in forward reading direction.
     pub fn get_stop(&self) -> usize {
         match self {
-            InDel::Ins(ins) => ins.position + 1,
+            InDel::Ins(ins) => ins.position,
             InDel::Del(del) => del.stop,
         }
     }
