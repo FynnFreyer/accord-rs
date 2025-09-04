@@ -313,7 +313,7 @@ impl Calculator {
             }
 
             // add unaffected sequence part in between events
-            let between_range = event_stop + 1..prev_event_start;
+            let between_range = event_stop..prev_event_start;
             let between = &seq_bytes[between_range];
             vd.push_front(between);
 
