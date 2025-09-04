@@ -47,7 +47,9 @@ jobs:
           source "${HOME}/.cargo/env"
 
           # build wheels for all python versions
-          for PYBIN in /opt/python/cp3{8,9,1?-}*/bin; do
+          # TODO: python3.14 not supported yet -> change back or amend strategy
+          # for PYBIN in /opt/python/cp3{8,9,1?-}*/bin; do
+          for PYBIN in /opt/python/cp3{8,9,10,11,12,13}*/bin; do
             "${PYBIN}/pip" install maturin
             "${PYBIN}/maturin" build -i "${PYBIN}/python" --release --out dist
           done
