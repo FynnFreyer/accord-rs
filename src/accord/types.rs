@@ -9,7 +9,7 @@ pub type BaseCounts = Vec<Counter<u8>>;
 pub type ExpandedBaseCounts = HashMap<char, Coverage>;
 
 /// A map in which encountered insertions point to their respective number of occurrences.
-pub type InDelCounts = Counter<InDel, usize>;
+pub type InDelCounts = Counter<InDel>;
 
 /// Vector containing coverage of a reference genome per base position.
 pub type Coverage = Vec<usize>;
