@@ -170,7 +170,7 @@ impl Calculator {
                 }
             };
 
-            let ref_pos = (pileup.pos() - 1) as usize;
+            let ref_pos = pileup.pos() as usize;
             debug!("Analysing pileup in position {ref_pos}.");
 
             for alignment in pileup.alignments() {
