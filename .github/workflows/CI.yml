@@ -81,12 +81,13 @@ jobs:
           install: >-
             git
             make
-            mingw-w64-zlib
-            mingw-w64-bzip2
-            mingw-w64-xz
-            mingw-w64-curl
-            mingw-w64-openssl
-            mingw-w64-libdeflate
+            zlib
+            lzlib
+            bzip2
+            xz
+            curl
+            openssl
+            libdeflate
 
       - name: Build HTSlib from source
         shell: msys2 {0}
