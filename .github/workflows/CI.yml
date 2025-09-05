@@ -71,10 +71,6 @@ jobs:
             sys: mingw32
             env: i686
 
-    defaults:
-      run:
-        shell: msys2 {0}
-
     steps:
 
       - uses: actions/checkout@v4
@@ -103,6 +99,7 @@ jobs:
           pacboy: toolchain:p
 
       - name: Build HTSlib from source
+        shell: msys2 {0}
         run: |
           git clone https://github.com/samtools/htslib.git
           cd htslib
