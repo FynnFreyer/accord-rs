@@ -58,14 +58,25 @@ jobs:
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
+
     strategy:
       matrix:
         platform:
           - runner: windows-latest
             target: x64
-#          - runner: windows-latest
-#            target: x86
+            sys: mingw64
+            env: x86_64
+          - runner: windows-latest
+            target: x86
+            sys: mingw32
+            env: i686
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
     steps:
+
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -75,26 +86,27 @@ jobs:
       - name: Install OpenSSL
         run: choco install openssl -y
 
-      - name: Install MSYS2
+      - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
         with:
+          msystem: ${{matrix.platform.sys}}
+          update: true
           install: >-
             git
-            make
-            zlib
-            lzlib
-            bzip2
-            xz
-            curl
-            openssl
-            libdeflate
+            base-devel
+            mingw-w64-${{matrix.platform.env}}-zlib
+            mingw-w64-${{matrix.platform.env}}-bzip2
+            mingw-w64-${{matrix.platform.env}}-xz
+            mingw-w64-${{matrix.platform.env}}-curl
+            mingw-w64-${{matrix.platform.env}}-openssl
+            mingw-w64-${{matrix.platform.env}}-libdeflate
+          pacboy: toolchain:p
 
       - name: Build HTSlib from source
-        shell: msys2 {0}
         run: |
           git clone https://github.com/samtools/htslib.git
           cd htslib
-          make
+          makepkg-mingw --noconfirm --noprogressbar -sCLf
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
