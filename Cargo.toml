@@ -19,7 +19,7 @@ name = "accord"
 path = "src/main.rs"
 
 [dependencies]
-pyo3 = "0.22"
+pyo3 = { version = "0.25", features = ["extension-module", "generate-import-lib"] }
 rust-htslib = "0.46"
 itertools = "0.13"
 counter = "0.6"
